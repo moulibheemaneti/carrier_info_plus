@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Deliberately empty.
+
+      This plugin declares no permissions. READ_PHONE_STATE is a runtime
+      permission that shows up in the Play Console and obliges the app to file
+      a data-safety declaration, so it is the app's decision to make, not the
+      package's. Apps that only need the permission-free subset (network
+      operator, SIM state, MCC/MNC of the active SIM) never have to ask for
+      anything.
+
+      To read per-SIM data, declare this in your own app's manifest:
+        <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    -->
+</manifest>

@@ -1,0 +1,35 @@
+name: carrier_info_plus
+description: >-
+  Cellular carrier, SIM and network info for Flutter. Swift Package Manager
+  ready, dual-SIM aware, and explicit about what modern iOS no longer reports.
+version: 1.0.0
+repository: https://github.com/moulibheemaneti/carrier_info_plus
+issue_tracker: https://github.com/moulibheemaneti/carrier_info_plus/issues
+topics:
+  - carrier
+  - sim
+  - telephony
+  - cellular
+  - network
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.moulibheemaneti.carrier_info_plus
+        pluginClass: CarrierInfoPlusPlugin
+      ios:
+        pluginClass: CarrierInfoPlusPlugin

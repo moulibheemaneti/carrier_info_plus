@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// Versions for building this plugin standalone. A consuming app's own
+// settings.gradle takes precedence, so bumping these does not force anything
+// on the apps that depend on the package.
+plugins {
+    id "com.android.library" version "8.7.3" apply false
+    id "org.jetbrains.kotlin.android" version "2.1.0" apply false
+}
