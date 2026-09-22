@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.0...carrier_info_plus-v2.0.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* declare meta as a direct dependency ([#6](https://github.com/moulibheemaneti/carrier_info_plus/issues/6)) ([4c7f1be](https://github.com/moulibheemaneti/carrier_info_plus/commit/4c7f1be806d2796b56febcfa5d82c76563eb52df))
+
 ## 2.0.0 (2026-09-22)
 
 A ground-up rewrite. The package is now built on a single pigeon contract that
