@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.0.0](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v1.1.0...carrier_info_plus-v2.0.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* carrier_info_plus 2.0.0 is a ground-up rewrite with a different API surface.
+
+### Features
+
+* **android:** migrate to Flutter's built-in Kotlin ([#3](https://github.com/moulibheemaneti/carrier_info_plus/issues/3)) ([a89d722](https://github.com/moulibheemaneti/carrier_info_plus/commit/a89d7221925daa80120231c0a0daade2efb43716))
+* initial release of carrier_info_plus 1.0.0 ([35d14cb](https://github.com/moulibheemaneti/carrier_info_plus/commit/35d14cb1c33f6eaca5b4c5974c4eef359da13f9f))
+* rewrite on pigeon with a typed cross-platform contract ([#4](https://github.com/moulibheemaneti/carrier_info_plus/issues/4)) ([a8b38c2](https://github.com/moulibheemaneti/carrier_info_plus/commit/a8b38c2010bb0099832d4478d12b43524d8fcdeb))
+
+
+### Bug Fixes
+
+* satisfy dart format and the analyzer ([2e6006a](https://github.com/moulibheemaneti/carrier_info_plus/commit/2e6006a54e3cd23ca58655d4bddb29223e482be7))
+
+
+### Miscellaneous
+
+* **main:** release 1.1.0 ([fe41b21](https://github.com/moulibheemaneti/carrier_info_plus/commit/fe41b212df70f2740049df8003d4f7674e642c7d))
+
+
+### Documentation
+
+* add pub.dev links to README and pubspec ([#2](https://github.com/moulibheemaneti/carrier_info_plus/issues/2)) ([b16f718](https://github.com/moulibheemaneti/carrier_info_plus/commit/b16f718079a3667cb6a41183ff3b3d2254559c46))
+* explain why both platform calls map to one ([69214ab](https://github.com/moulibheemaneti/carrier_info_plus/commit/69214ab694f6f236ec9a48353c63955697945e7d))
+
+
+### CI
+
+* add release automation and repo standards from sibling packages ([#1](https://github.com/moulibheemaneti/carrier_info_plus/issues/1)) ([b16ef3c](https://github.com/moulibheemaneti/carrier_info_plus/commit/b16ef3c0e62dbbbdf0ab0f2c502414050e0f4daa))
+
 ## 1.1.0
 
 Android now builds on Flutter's built-in Kotlin.
