@@ -131,7 +131,7 @@ broke.
 
 ## Migrating from `carrier_info`
 
-The platform split is gone — one call covers both platforms:
+The platform split is gone. Both `getAndroidInfo()` and `getIosInfo()` map to the same `CarrierInfoPlus.get()` — that repetition in the table is deliberate, not a typo. [Why](#why-one-call-for-both-platforms)
 
 | `carrier_info` | `carrier_info_plus` |
 |---|---|
@@ -148,6 +148,50 @@ The platform split is gone — one call covers both platforms:
 | `IosCarrierData.supportsEmbeddedSIM` | `capabilities.supportsEmbeddedSim` |
 | `IosCarrierData.isSIMInserted` | `CarrierInfo.hasSim` |
 | `toMap()['_ios_version_info']` | `CarrierInfo.support` |
+
+### Why one call for both platforms
+
+The old API made you branch on platform to ask one question:
+
+```dart
+String? name;
+if (Platform.isAndroid) {
+  final d = await CarrierInfo.getAndroidInfo();
+  name = d?.telephonyInfo.first.carrierName;
+} else {
+  final d = await CarrierInfo.getIosInfo();
+  name = d?.carrierData?.first.carrierName;
+}
+```
+
+Two return types, two field paths, two sets of null checks. Now:
+
+```dart
+final info = await CarrierInfoPlus.get();
+final name = info.primarySim?.carrierName;
+```
+
+The platform difference hasn't vanished — it moved out of the *type* and into
+the *data*. iOS returns fewer populated fields, and `support` says why.
+
+That's the better axis, because platform was never the thing that actually
+varied:
+
+| | Carrier name |
+|---|---|
+| Android, `READ_PHONE_STATE` granted | ✅ populated |
+| Android, permission denied | ❌ null |
+| iOS 16+ | ❌ null |
+
+**Android already has the partial-data problem on its own.** Splitting by
+platform never spared you from handling it — you just had to handle it again
+inside the Android branch, unaided. One shape with one `support` block covers
+all three rows, and adding a platform later is a new `DataLimitation` value
+rather than a new class and a new branch in every app.
+
+You can still branch on `Platform.isIOS` if you want. But
+`info.support.carrierIdentityAvailable` is the better condition: it tests the
+thing you actually care about instead of a proxy for it.
 
 ### Fields with no replacement
 
