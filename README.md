@@ -62,6 +62,14 @@ mean completely different things in a UI.
 
 ## Install
 
+Available on pub.dev: **<https://pub.dev/packages/carrier_info_plus>**
+
+```bash
+flutter pub add carrier_info_plus
+```
+
+Or add it to your `pubspec.yaml` by hand:
+
 ```yaml
 dependencies:
   carrier_info_plus: ^1.0.0
