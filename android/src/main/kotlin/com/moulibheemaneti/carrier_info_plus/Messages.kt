@@ -221,32 +221,150 @@ enum class PlatformSimState(val raw: Int) {
 /**
  * Pigeon equivalent of [RadioAccessTechnology].
  *
- * The mapping from a radio technology to a network generation is deliberately
- * absent here: it is pure derivation, so it lives in Dart where both platforms
- * get the same answer and it can be tested without a device.
+ * Values are named after the radio technology itself, not after either
+ * platform's constant, because the two disagree on spelling for the same
+ * thing. Android sources these from `TelephonyManager.NETWORK_TYPE_*`, iOS
+ * from `CTRadioAccessTechnology*`, and neither platform reports every value.
+ *
+ * The mapping from a technology to a network generation is deliberately
+ * absent here: it is pure derivation, so it lives in Dart where both
+ * platforms get the same answer and it can be tested without a device.
  */
 enum class PlatformRadioAccessTechnology(val raw: Int) {
+  /** Nothing readable, or a technology neither platform names. */
   UNKNOWN(0),
+  /**
+   * General Packet Radio Service: 2G packet data.
+   *
+   * Android `NETWORK_TYPE_GPRS`, iOS `CTRadioAccessTechnologyGPRS`.
+   */
   GPRS(1),
+  /**
+   * Enhanced Data rates for GSM Evolution: 2.5G, GPRS with more throughput.
+   *
+   * Android `NETWORK_TYPE_EDGE`, iOS `CTRadioAccessTechnologyEdge`.
+   */
   EDGE(2),
+  /**
+   * Global System for Mobile Communications: 2G circuit-switched.
+   *
+   * Android `NETWORK_TYPE_GSM`. Android only -- iOS describes the same
+   * radio through its data technology, GPRS or Edge.
+   */
   GSM(3),
+  /**
+   * CDMA2000 1x Radio Transmission Technology: 2G data on CDMA networks.
+   *
+   * Android `NETWORK_TYPE_1xRTT`, iOS `CTRadioAccessTechnologyCDMA1x`.
+   */
   ONE_XRTT(4),
+  /**
+   * Code Division Multiple Access (IS-95): 2G, effectively retired.
+   *
+   * Android `NETWORK_TYPE_CDMA`. Android only.
+   */
   CDMA(5),
+  /**
+   * Integrated Digital Enhanced Network: Motorola's 2G push-to-talk network.
+   *
+   * Android `NETWORK_TYPE_IDEN`. Android only, and shut down in practice --
+   * present because the constant still exists, not because you will see it.
+   */
   IDEN(6),
+  /**
+   * Universal Mobile Telecommunications System: baseline 3G.
+   *
+   * Android `NETWORK_TYPE_UMTS`, iOS `CTRadioAccessTechnologyWCDMA` -- WCDMA
+   * is the air interface UMTS runs over, so the two name the same network.
+   */
   UMTS(7),
+  /**
+   * High Speed Downlink Packet Access: 3.5G, faster downlink.
+   *
+   * Android `NETWORK_TYPE_HSDPA`, iOS `CTRadioAccessTechnologyHSDPA`.
+   */
   HSDPA(8),
+  /**
+   * High Speed Uplink Packet Access: 3.5G, faster uplink.
+   *
+   * Android `NETWORK_TYPE_HSUPA`, iOS `CTRadioAccessTechnologyHSUPA`.
+   */
   HSUPA(9),
+  /**
+   * High Speed Packet Access: HSDPA and HSUPA reported together.
+   *
+   * Android `NETWORK_TYPE_HSPA`. Android only -- iOS reports the two halves
+   * separately and never combines them.
+   */
   HSPA(10),
+  /**
+   * Evolved HSPA, marketed as HSPA+: 3.75G.
+   *
+   * Android `NETWORK_TYPE_HSPAP`. Android only.
+   */
   HSPAP(11),
+  /**
+   * CDMA2000 EV-DO Revision 0: first-generation 3G data on CDMA.
+   *
+   * Android `NETWORK_TYPE_EVDO_0`, iOS `CTRadioAccessTechnologyCDMAEVDORev0`.
+   */
   EVDO0(12),
+  /**
+   * EV-DO Revision A: Revision 0 with a usable uplink.
+   *
+   * Android `NETWORK_TYPE_EVDO_A`, iOS `CTRadioAccessTechnologyCDMAEVDORevA`.
+   */
   EVDO_A(13),
+  /**
+   * EV-DO Revision B: multi-carrier EV-DO.
+   *
+   * Android `NETWORK_TYPE_EVDO_B`, iOS `CTRadioAccessTechnologyCDMAEVDORevB`.
+   */
   EVDO_B(14),
+  /**
+   * Evolved High Rate Packet Data: the bridge that let CDMA carriers reach
+   * LTE without a hard cutover.
+   *
+   * Android `NETWORK_TYPE_EHRPD`, iOS `CTRadioAccessTechnologyeHRPD`.
+   */
   EHRPD(15),
+  /**
+   * Time Division Synchronous CDMA: 3G, deployed almost entirely in China.
+   *
+   * Android `NETWORK_TYPE_TD_SCDMA`. Android only.
+   */
   TD_SCDMA(16),
+  /**
+   * Long Term Evolution: 4G.
+   *
+   * Android `NETWORK_TYPE_LTE`, iOS `CTRadioAccessTechnologyLTE`.
+   */
   LTE(17),
-  LTE_CA(18),
-  IWLAN(19),
-  NR(20);
+  /**
+   * Wi-Fi calling: voice and data over IEEE 802.11 rather than a cellular
+   * radio.
+   *
+   * Android `NETWORK_TYPE_IWLAN`. Android only. Note that this is not a
+   * cellular generation at all, so it derives to an unknown generation
+   * rather than to 4G or 5G -- the device is on Wi-Fi, not on a mobile
+   * network, and treating it as either would misreport the connection.
+   */
+  IWLAN(18),
+  /**
+   * 5G New Radio, standalone: a 5G core with a 5G radio.
+   *
+   * Android `NETWORK_TYPE_NR`, iOS `CTRadioAccessTechnologyNR`.
+   */
+  NR(19),
+  /**
+   * 5G New Radio, non-standalone: a 5G radio anchored to a 4G core, which is
+   * how most "5G" coverage is actually deployed.
+   *
+   * iOS `CTRadioAccessTechnologyNRNSA`. iOS only: Android does not give NSA
+   * its own network type, reporting it as [lte] plus a separate NR state,
+   * so an Android device on non-standalone 5G comes back as [lte] here.
+   */
+  NR_NSA(20);
 
   companion object {
     fun ofRaw(raw: Int): PlatformRadioAccessTechnology? {
