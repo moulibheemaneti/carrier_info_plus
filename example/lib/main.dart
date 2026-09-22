@@ -1,3 +1,9 @@
+// A live reference for everything carrier_info_plus exposes.
+//
+// Every public field, getter and enum in the package appears on this screen,
+// so the example doubles as a way to see what a given device actually answers
+// rather than what the API merely offers.
+
 import 'dart:async';
 
 import 'package:carrier_info_plus/carrier_info_plus.dart';
@@ -7,8 +13,7 @@ void main() {
   runApp(const CarrierInfoApp());
 }
 
-/// Demonstrates reading carrier state and, crucially, reacting to what the
-/// platform could not answer.
+/// The example application.
 class CarrierInfoApp extends StatelessWidget {
   /// Creates a [CarrierInfoApp].
   const CarrierInfoApp({super.key});
@@ -21,7 +26,7 @@ class CarrierInfoApp extends StatelessWidget {
   );
 }
 
-/// Shows a snapshot, with a refresh and a permission prompt.
+/// Reads a snapshot and renders the whole public API against it.
 class CarrierInfoPage extends StatefulWidget {
   /// Creates a [CarrierInfoPage].
   const CarrierInfoPage({super.key});
@@ -32,7 +37,9 @@ class CarrierInfoPage extends StatefulWidget {
 
 class _CarrierInfoPageState extends State<CarrierInfoPage> {
   CarrierInfo? _info;
+  bool? _permission;
   Object? _error;
+  DateTime? _readAt;
   bool _loading = true;
 
   @override
@@ -44,10 +51,15 @@ class _CarrierInfoPageState extends State<CarrierInfoPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // Both public read APIs, called side by side so the screen can show that
+      // support.permissionGranted and hasPermission() agree.
       final info = await CarrierInfoPlus.get();
+      final permission = await CarrierInfoPlus.hasPermission();
       if (!mounted) return;
       setState(() {
         _info = info;
+        _permission = permission;
+        _readAt = DateTime.now();
         _error = null;
         _loading = false;
       });
@@ -82,8 +94,10 @@ class _CarrierInfoPageState extends State<CarrierInfoPage> {
       body: switch ((_loading, _error, info)) {
         (true, _, _) => const Center(child: CircularProgressIndicator()),
         (_, final Object error, _) => _ErrorView(error: error, onRetry: _load),
-        (_, _, final CarrierInfo info) => _InfoView(
+        (_, _, final CarrierInfo info) => _ApiView(
           info: info,
+          permission: _permission,
+          readAt: _readAt,
           onRequestPermission: _requestPermission,
         ),
         _ => const SizedBox.shrink(),
@@ -116,10 +130,17 @@ class _ErrorView extends StatelessWidget {
   );
 }
 
-class _InfoView extends StatelessWidget {
-  const _InfoView({required this.info, required this.onRequestPermission});
+class _ApiView extends StatelessWidget {
+  const _ApiView({
+    required this.info,
+    required this.permission,
+    required this.readAt,
+    required this.onRequestPermission,
+  });
 
   final CarrierInfo info;
+  final bool? permission;
+  final DateTime? readAt;
   final VoidCallback onRequestPermission;
 
   @override
@@ -128,21 +149,17 @@ class _InfoView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
-        // The support block comes first on purpose. Every null below is only
-        // meaningful once you know whether the platform was even asked.
         _Section(
-          title: 'What the platform could answer',
+          title: 'CarrierInfoPlus',
+          subtitle: 'The three static entry points.',
           children: <Widget>[
-            _Row('Carrier identity', _yesNo(support.carrierIdentityAvailable)),
-            _Row('Per-SIM data', _yesNo(support.perSimDataAvailable)),
-            _Row('Permission granted', _yesNo(support.permissionGranted)),
-            _Row('Limitation', support.limitation.name),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                support.limitation.explanation,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+            _Row('get()', readAt == null ? '—' : 'read at ${_time(readAt!)}'),
+            _Row('hasPermission()', _bool(permission)),
+            _Row(
+              'requestPermission()',
+              support.limitation.isRecoverable
+                  ? 'available'
+                  : 'nothing to ask for',
             ),
             if (support.limitation.isRecoverable)
               Padding(
@@ -150,53 +167,123 @@ class _InfoView extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onRequestPermission,
                   icon: const Icon(Icons.lock_open),
-                  label: const Text('Grant READ_PHONE_STATE'),
+                  label: const Text('requestPermission()'),
                 ),
               ),
           ],
         ),
+
+        // First, because every null below only means something once you know
+        // whether the platform was even asked.
         _Section(
-          title: 'Network',
+          title: 'PlatformSupport',
+          subtitle: 'What the platform could answer, and why not.',
           children: <Widget>[
-            _Row('Operator', info.network.operatorName ?? '—'),
-            _Row('Country', info.network.countryIso ?? '—'),
-            _Row('Generation', info.generation.name),
             _Row(
-              'Radios',
+              'carrierIdentityAvailable',
+              _bool(support.carrierIdentityAvailable),
+            ),
+            _Row('perSimDataAvailable', _bool(support.perSimDataAvailable)),
+            _Row('permissionGranted', _bool(support.permissionGranted)),
+            _Row('limitation', support.limitation.name),
+            _Row(
+              'limitation.isRecoverable',
+              _bool(support.limitation.isRecoverable),
+            ),
+            _Row('isComplete', _bool(support.isComplete)),
+            _Note(support.limitation.explanation),
+          ],
+        ),
+
+        _Section(
+          title: 'CarrierInfo',
+          subtitle: 'Top-level fields and derived getters.',
+          children: <Widget>[
+            _Row('simCards.length', '${info.simCards.length}'),
+            _Row('simCount', info.simCount?.toString() ?? 'null'),
+            _Row('hasSim', _bool(info.hasSim)),
+            _Row('isDualSimActive', _bool(info.isDualSimActive)),
+            _Row('generation', info.generation.name),
+            _Row('primarySim', _simLabel(info.primarySim)),
+            _Row('voiceSim', _simLabel(info.voiceSim)),
+            if (info.simCount != null && info.simCount! > info.simCards.length)
+              const _Note(
+                'More SIMs are present than could be described. That gap is '
+                'the reason simCount exists.',
+              ),
+          ],
+        ),
+
+        _Section(
+          title: 'NetworkInfo',
+          subtitle: 'A property of the device, not of any one SIM.',
+          children: <Widget>[
+            _Row('operatorName', info.network.operatorName ?? 'null'),
+            _Row('countryIso', info.network.countryIso ?? 'null'),
+            _Row(
+              'radioTechnologies',
               info.network.radioTechnologies.isEmpty
-                  ? '—'
+                  ? '[]'
                   : info.network.radioTechnologies
                         .map((RadioAccessTechnology t) => t.name)
                         .join(', '),
             ),
-            _Row('Cellular data', info.network.cellularDataState.name),
+            _Row('cellularDataState', info.network.cellularDataState.name),
+            _Row('generation', info.network.generation.name),
+            _Row('isConnected', _bool(info.network.isConnected)),
           ],
         ),
+
         _Section(
-          title: 'SIMs (${info.simCount ?? info.simCards.length})',
+          title: 'TelephonyCapabilities',
+          subtitle: 'Hardware capability, independent of any SIM.',
+          children: <Widget>[
+            _Row('isVoiceCapable', _bool(info.capabilities.isVoiceCapable)),
+            _Row('isSmsCapable', _bool(info.capabilities.isSmsCapable)),
+            _Row('isDataCapable', _bool(info.capabilities.isDataCapable)),
+            _Row('isDataEnabled', _bool(info.capabilities.isDataEnabled)),
+            _Row(
+              'isMultiSimSupported',
+              _bool(info.capabilities.isMultiSimSupported),
+            ),
+            _Row(
+              'supportsEmbeddedSim',
+              _bool(info.capabilities.supportsEmbeddedSim),
+            ),
+          ],
+        ),
+
+        _Section(
+          title: 'SimCard  ×${info.simCards.length}',
+          subtitle: 'Every field, per SIM.',
           children: <Widget>[
             if (info.simCards.isEmpty)
-              const Text('No SIM could be described.')
+              const _Note('No SIM could be described.')
             else
               for (final SimCard sim in info.simCards) _SimTile(sim: sim),
           ],
         ),
-        _Section(
-          title: 'Capabilities',
-          children: <Widget>[
-            _Row('Voice', _yesNo(info.capabilities.isVoiceCapable)),
-            _Row('SMS', _yesNo(info.capabilities.isSmsCapable)),
-            _Row('Data radio', _yesNo(info.capabilities.isDataCapable)),
-            _Row('Data enabled', _yesNo(info.capabilities.isDataEnabled)),
-            _Row('Multi-SIM', _yesNo(info.capabilities.isMultiSimSupported)),
-            _Row('eSIM', _yesNo(info.capabilities.supportsEmbeddedSim)),
-          ],
-        ),
+
+        const _EnumReference(),
       ],
     );
   }
 
-  static String _yesNo(bool value) => value ? 'yes' : 'no';
+  static String _bool(bool? value) => switch (value) {
+    null => 'unknown',
+    true => 'true',
+    false => 'false',
+  };
+
+  static String _time(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}:'
+      '${value.second.toString().padLeft(2, '0')}';
+
+  static String _simLabel(SimCard? sim) {
+    if (sim == null) return 'null';
+    return sim.carrierName ?? sim.displayName ?? 'slot ${sim.slotIndex}';
+  }
 }
 
 class _SimTile extends StatelessWidget {
@@ -207,13 +294,13 @@ class _SimTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badges = <String>[
-      if (sim.isDefaultData) 'data',
-      if (sim.isDefaultVoice) 'voice',
+      if (sim.isDefaultData) 'default data',
+      if (sim.isDefaultVoice) 'default voice',
       if (sim.isEmbedded) 'eSIM',
       if (sim.isRoaming) 'roaming',
     ];
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -225,9 +312,10 @@ class _SimTile extends StatelessWidget {
             ),
             if (badges.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 6),
                 child: Wrap(
                   spacing: 6,
+                  runSpacing: -8,
                   children: <Widget>[
                     for (final String badge in badges)
                       Chip(
@@ -238,17 +326,24 @@ class _SimTile extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            _Row('Slot', '${sim.slotIndex ?? '—'}'),
-            _Row('PLMN', sim.plmn ?? '—'),
-            _Row('Country', sim.countryIso ?? '—'),
-            _Row('State', sim.state.name),
+            _Row('subscriptionId', sim.subscriptionId?.toString() ?? 'null'),
+            _Row('slotIndex', sim.slotIndex?.toString() ?? 'null'),
+            _Row('carrierName', sim.carrierName ?? 'null'),
+            _Row('displayName', sim.displayName ?? 'null'),
+            _Row('mobileCountryCode', sim.mobileCountryCode ?? 'null'),
+            _Row('mobileNetworkCode', sim.mobileNetworkCode ?? 'null'),
+            _Row('countryIso', sim.countryIso ?? 'null'),
+            _Row('carrierId', sim.carrierId?.toString() ?? 'null'),
+            _Row('isEmbedded', '${sim.isEmbedded}'),
+            _Row('isRoaming', '${sim.isRoaming}'),
+            _Row('isDefaultData', '${sim.isDefaultData}'),
+            _Row('isDefaultVoice', '${sim.isDefaultVoice}'),
+            _Row('state', sim.state.name),
+            _Row('plmn', sim.plmn ?? 'null'),
+            _Row('hasIdentity', '${sim.hasIdentity}'),
             if (!sim.hasIdentity)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'This SIM was counted but not identified.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+              const _Note(
+                'Counted but not identified. On iOS 16+ this is every SIM.',
               ),
           ],
         ),
@@ -257,23 +352,109 @@ class _SimTile extends StatelessWidget {
   }
 }
 
+/// Every enum the package exports, with the getters defined on them.
+class _EnumReference extends StatelessWidget {
+  const _EnumReference();
+
+  @override
+  Widget build(BuildContext context) => _Section(
+    title: 'Enums',
+    subtitle: 'Exported values, and what a device can never report.',
+    children: <Widget>[
+      ExpansionTile(
+        title: const Text('RadioAccessTechnology'),
+        subtitle: Text(
+          '${RadioAccessTechnology.values.length} values, '
+          'each carrying .generation',
+        ),
+        tilePadding: EdgeInsets.zero,
+        children: <Widget>[
+          for (final RadioAccessTechnology value
+              in RadioAccessTechnology.values)
+            _Row(value.name, value.generation.name),
+        ],
+      ),
+      ExpansionTile(
+        title: const Text('SimState'),
+        subtitle: Text('${SimState.values.length} values'),
+        tilePadding: EdgeInsets.zero,
+        children: <Widget>[
+          for (final SimState value in SimState.values)
+            _Row(value.name, value == SimState.ready ? 'fields populated' : ''),
+        ],
+      ),
+      ExpansionTile(
+        title: const Text('DataLimitation'),
+        subtitle: Text(
+          '${DataLimitation.values.length} values, '
+          'each with .isRecoverable and .explanation',
+        ),
+        tilePadding: EdgeInsets.zero,
+        children: <Widget>[
+          for (final DataLimitation value in DataLimitation.values)
+            _Row(
+              value.name,
+              value.isRecoverable ? 'recoverable' : 'not recoverable',
+            ),
+        ],
+      ),
+      ExpansionTile(
+        title: const Text('NetworkGeneration / CellularDataState'),
+        tilePadding: EdgeInsets.zero,
+        children: <Widget>[
+          _Row(
+            'NetworkGeneration',
+            NetworkGeneration.values
+                .map((NetworkGeneration v) => v.name)
+                .join(', '),
+          ),
+          _Row(
+            'CellularDataState',
+            CellularDataState.values
+                .map((CellularDataState v) => v.name)
+                .join(', '),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
+  const _Section({required this.title, required this.children, this.subtitle});
 
   final String title;
+  final String? subtitle;
   final List<Widget> children;
 
   @override
+  Widget build(BuildContext context) {
+    final subtitle = this.subtitle;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          if (subtitle != null)
+            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+          const Divider(),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _Note extends StatelessWidget {
+  const _Note(this.text);
+
+  final String text;
+
+  @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        ...children,
-      ],
-    ),
+    padding: const EdgeInsets.only(top: 8),
+    child: Text(text, style: Theme.of(context).textTheme.bodySmall),
   );
 }
 
@@ -285,19 +466,18 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
+    padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        SizedBox(width: 150, child: Text(label)),
-        Expanded(
+        SizedBox(
+          width: 190,
           child: Text(
-            value,
-            style: const TextStyle(
-              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-            ),
+            label,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           ),
         ),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 12))),
       ],
     ),
   );
