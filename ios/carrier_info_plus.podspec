@@ -1,4 +1,5 @@
 #
+# To learn more about a Podspec see http://guides.cocoapods.org/syntax/podspec.html.
 # CocoaPods support, kept alongside Swift Package Manager.
 #
 # Flutter picks SwiftPM or CocoaPods per consuming app, not per plugin: an app
