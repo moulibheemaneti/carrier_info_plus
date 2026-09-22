@@ -9,7 +9,11 @@ pluginManagement {
 // Versions for building this plugin standalone. A consuming app's own
 // settings.gradle takes precedence, so bumping these does not force anything
 // on the apps that depend on the package.
+//
+// AGP 9 is the floor because this project no longer applies the Kotlin Gradle
+// plugin. Standalone there is no Flutter build to apply it for us, so Kotlin
+// has to come from AGP's built-in support — which AGP 9 provides and enables
+// by default.
 plugins {
-    id "com.android.library" version "8.7.3" apply false
-    id "org.jetbrains.kotlin.android" version "2.1.0" apply false
+    id "com.android.library" version "9.1.0" apply false
 }
