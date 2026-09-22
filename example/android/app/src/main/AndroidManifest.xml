@@ -1,4 +1,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      The plugin declares no permissions of its own, deliberately: READ_PHONE_STATE
+      is a runtime permission that appears in the Play Console and obliges the app
+      to file a data-safety declaration, so it is the app's call. This example
+      declares both so it can demonstrate the full API.
+
+      Without this line, Activity.requestPermissions() is denied immediately and
+      silently -- no dialog is ever shown -- which looks exactly like a broken
+      button.
+    -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+
+    <!--
+      Not a runtime permission and never prompted for. TelephonyManager.isDataEnabled()
+      accepts this instead of READ_PHONE_STATE, so declaring it is what makes
+      capabilities.isDataEnabled and network.cellularDataState answer at all.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="carrier_info_plus_example"
         android:name="${applicationName}"

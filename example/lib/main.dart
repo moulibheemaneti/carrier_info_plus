@@ -73,8 +73,30 @@ class _CarrierInfoPageState extends State<CarrierInfoPage> {
   }
 
   Future<void> _requestPermission() async {
-    await CarrierInfoPlus.requestPermission();
+    try {
+      final granted = await CarrierInfoPlus.requestPermission();
+      if (!mounted) return;
+      if (!granted) {
+        // Android denies silently, with no dialog at all, when the permission
+        // is missing from the manifest or has been permanently denied. Saying
+        // so beats a button that looks broken.
+        _report(
+          'Not granted. If no dialog appeared, Android is refusing to ask '
+          'again — grant it from the app settings.',
+        );
+      }
+    } on Object catch (error) {
+      // Without this the plugin's own errors, such as being called with no
+      // foreground activity, vanish into an unhandled async exception.
+      if (!mounted) return;
+      _report('requestPermission() failed: $error');
+    }
     await _load();
+  }
+
+  void _report(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
