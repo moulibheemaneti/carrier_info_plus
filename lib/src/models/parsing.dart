@@ -46,11 +46,11 @@ String? asString(Object? value) {
 
 /// Reads an int, tolerating a platform that sends it as a string or double.
 int? asInt(Object? value) => switch (value) {
-      final int v => v,
-      final num v => v.toInt(),
-      final String v => int.tryParse(v),
-      _ => null,
-    };
+  final int v => v,
+  final num v => v.toInt(),
+  final String v => int.tryParse(v),
+  _ => null,
+};
 
 /// Reads a bool, defaulting to [orElse] when absent or malformed.
 bool asBool(Object? value, {bool orElse = false}) =>

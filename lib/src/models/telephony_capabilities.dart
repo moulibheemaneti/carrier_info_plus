@@ -54,7 +54,8 @@ final class TelephonyCapabilities {
   final bool supportsEmbeddedSim;
 
   @override
-  String toString() => 'TelephonyCapabilities(voice: $isVoiceCapable, '
+  String toString() =>
+      'TelephonyCapabilities(voice: $isVoiceCapable, '
       'sms: $isSmsCapable, data: $isDataCapable, dataEnabled: $isDataEnabled, '
       'multiSim: $isMultiSimSupported, eSIM: $supportsEmbeddedSim)';
 
@@ -71,11 +72,11 @@ final class TelephonyCapabilities {
 
   @override
   int get hashCode => Object.hash(
-        isVoiceCapable,
-        isSmsCapable,
-        isDataCapable,
-        isDataEnabled,
-        isMultiSimSupported,
-        supportsEmbeddedSim,
-      );
+    isVoiceCapable,
+    isSmsCapable,
+    isDataCapable,
+    isDataEnabled,
+    isMultiSimSupported,
+    supportsEmbeddedSim,
+  );
 }

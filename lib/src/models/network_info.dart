@@ -16,15 +16,16 @@ final class NetworkInfo {
 
   /// Decodes from a platform channel map.
   factory NetworkInfo.fromMap(Map<String, Object?> map) => NetworkInfo(
-        radioTechnologies: <RadioAccessTechnology>[
-          for (final name in asStringList(map['radioTechnologies']))
-            RadioAccessTechnology.fromName(name),
-        ],
-        operatorName: asString(map['operatorName']),
-        countryIso: asString(map['countryIso']),
-        cellularDataState:
-            CellularDataState.fromName(asString(map['cellularDataState'])),
-      );
+    radioTechnologies: <RadioAccessTechnology>[
+      for (final name in asStringList(map['radioTechnologies']))
+        RadioAccessTechnology.fromName(name),
+    ],
+    operatorName: asString(map['operatorName']),
+    countryIso: asString(map['countryIso']),
+    cellularDataState: CellularDataState.fromName(
+      asString(map['cellularDataState']),
+    ),
+  );
 
   /// Active radio technologies, one per active cellular service.
   ///
@@ -63,12 +64,13 @@ final class NetworkInfo {
 
   /// Whether any cellular radio is currently attached.
   bool get isConnected => radioTechnologies.any(
-        (RadioAccessTechnology technology) =>
-            technology != RadioAccessTechnology.unknown,
-      );
+    (RadioAccessTechnology technology) =>
+        technology != RadioAccessTechnology.unknown,
+  );
 
   @override
-  String toString() => 'NetworkInfo(generation: ${generation.name}, '
+  String toString() =>
+      'NetworkInfo(generation: ${generation.name}, '
       'radios: ${radioTechnologies.map((RadioAccessTechnology t) => t.name).toList()}, '
       'operator: $operatorName, data: ${cellularDataState.name})';
 
@@ -83,11 +85,11 @@ final class NetworkInfo {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(radioTechnologies),
-        operatorName,
-        countryIso,
-        cellularDataState,
-      );
+    Object.hashAll(radioTechnologies),
+    operatorName,
+    countryIso,
+    cellularDataState,
+  );
 }
 
 bool _listEquals(List<RadioAccessTechnology> a, List<RadioAccessTechnology> b) {

@@ -10,14 +10,14 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'carrier_info_plus',
-        theme: ThemeData(colorSchemeSeed: const Color(0xFF0175C2)),
-        darkTheme: ThemeData(
-          colorSchemeSeed: const Color(0xFF0175C2),
-          brightness: Brightness.dark,
-        ),
-        home: const CarrierPage(),
-      );
+    title: 'carrier_info_plus',
+    theme: ThemeData(colorSchemeSeed: const Color(0xFF0175C2)),
+    darkTheme: ThemeData(
+      colorSchemeSeed: const Color(0xFF0175C2),
+      brightness: Brightness.dark,
+    ),
+    home: const CarrierPage(),
+  );
 }
 
 /// Shows a live snapshot, refreshable by pull-to-refresh.
@@ -88,10 +88,10 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        children: <Widget>[
-          Padding(padding: const EdgeInsets.all(24), child: Text(text)),
-        ],
-      );
+    children: <Widget>[
+      Padding(padding: const EdgeInsets.all(24), child: Text(text)),
+    ],
+  );
 }
 
 class _Report extends StatelessWidget {
@@ -178,31 +178,31 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const Divider(),
-              for (final MapEntry<String, String> row in rows.entries)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(width: 120, child: Text(row.key)),
-                      Expanded(
-                        child: Text(
-                          row.value,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const Divider(),
+          for (final MapEntry<String, String> row in rows.entries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(width: 120, child: Text(row.key)),
+                  Expanded(
+                    child: Text(
+                      row.value,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
-                ),
-            ],
-          ),
-        ),
-      );
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
