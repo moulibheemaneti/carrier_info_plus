@@ -795,6 +795,16 @@ protocol CarrierInfoApi {
   ///
   /// Never throws for missing data: anything unreadable comes back null and is
   /// explained through [PlatformCarrierInfo.support].
+  ///
+  /// Dispatched to a background thread. The implementation makes roughly
+  /// fifteen binder IPC calls into the platform's telephony service, and the
+  /// default queue would run all of them on the platform thread -- the host
+  /// app's main thread. Each call is usually sub-millisecond, but they are IPC
+  /// and can stall, and a carrier lookup has no business sitting in front of
+  /// the host app's UI work.
+  ///
+  /// This does not change anything on the Dart side, which awaits a Future
+  /// either way.
   func getCarrierInfo() throws -> PlatformCarrierInfo
   /// Whether the permission guarding per-SIM data has been granted.
   ///
@@ -813,11 +823,28 @@ class CarrierInfoApiSetup {
   /// Sets up an instance of `CarrierInfoApi` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: CarrierInfoApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    #if os(iOS)
+      let taskQueue = binaryMessenger.makeBackgroundTaskQueue?()
+    #else
+      let taskQueue: FlutterTaskQueue? = nil
+    #endif
     /// Reads a fresh snapshot of the device's cellular state.
     ///
     /// Never throws for missing data: anything unreadable comes back null and is
     /// explained through [PlatformCarrierInfo.support].
-    let getCarrierInfoChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.carrier_info_plus.CarrierInfoApi.getCarrierInfo\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    ///
+    /// Dispatched to a background thread. The implementation makes roughly
+    /// fifteen binder IPC calls into the platform's telephony service, and the
+    /// default queue would run all of them on the platform thread -- the host
+    /// app's main thread. Each call is usually sub-millisecond, but they are IPC
+    /// and can stall, and a carrier lookup has no business sitting in front of
+    /// the host app's UI work.
+    ///
+    /// This does not change anything on the Dart side, which awaits a Future
+    /// either way.
+    let getCarrierInfoChannel = taskQueue == nil
+      ? FlutterBasicMessageChannel(name: "dev.flutter.pigeon.carrier_info_plus.CarrierInfoApi.getCarrierInfo\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+      : FlutterBasicMessageChannel(name: "dev.flutter.pigeon.carrier_info_plus.CarrierInfoApi.getCarrierInfo\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec, taskQueue: taskQueue)
     if let api = api {
       getCarrierInfoChannel.setMessageHandler { _, reply in
         do {

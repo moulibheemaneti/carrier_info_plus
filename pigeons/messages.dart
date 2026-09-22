@@ -348,6 +348,17 @@ abstract class CarrierInfoApi {
   ///
   /// Never throws for missing data: anything unreadable comes back null and is
   /// explained through [PlatformCarrierInfo.support].
+  ///
+  /// Dispatched to a background thread. The implementation makes roughly
+  /// fifteen binder IPC calls into the platform's telephony service, and the
+  /// default queue would run all of them on the platform thread -- the host
+  /// app's main thread. Each call is usually sub-millisecond, but they are IPC
+  /// and can stall, and a carrier lookup has no business sitting in front of
+  /// the host app's UI work.
+  ///
+  /// This does not change anything on the Dart side, which awaits a Future
+  /// either way.
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   PlatformCarrierInfo getCarrierInfo();
 
   /// Whether the permission guarding per-SIM data has been granted.

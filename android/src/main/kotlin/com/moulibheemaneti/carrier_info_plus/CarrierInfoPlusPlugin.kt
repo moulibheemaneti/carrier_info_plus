@@ -37,6 +37,20 @@ private const val PERMISSION_REQUEST_CODE = 0xC1F0
  *
  * The permission-free tier deliberately under-reports rather than guessing, and
  * says so through `support.perSimDataAvailable`.
+ *
+ * ## Threading
+ *
+ * [getCarrierInfo] is bound to a background task queue, because it makes
+ * roughly fifteen binder IPC calls and has no business holding the host app's
+ * main thread. Everything it touches -- [TelephonyManager],
+ * [SubscriptionManager], [EuiccManager] and the permission check -- is safe off
+ * the main thread.
+ *
+ * Everything else stays on the platform thread. [hasPermission] is a trivial
+ * local check, and [requestPermission] puts a system dialog on screen, which
+ * belongs on the main thread. [activity] and [pendingPermission] are therefore
+ * only ever touched from the platform thread and need no synchronisation;
+ * [context] is the one field crossing threads.
  */
 class CarrierInfoPlusPlugin :
     FlutterPlugin,
@@ -44,7 +58,16 @@ class CarrierInfoPlusPlugin :
     CarrierInfoApi,
     PluginRegistry.RequestPermissionsResultListener {
 
-    private lateinit var context: Context
+    /**
+     * Written on the platform thread when the engine attaches, read on the
+     * background queue by [getCarrierInfo]. Volatile so the background thread
+     * cannot observe a stale value, and nullable so a call that outlives
+     * detachment fails honestly instead of throwing
+     * UninitializedPropertyAccessException.
+     */
+    @Volatile
+    private var context: Context? = null
+
     private var activity: Activity? = null
     private var pendingPermission: CancellableContinuation<Boolean>? = null
 
@@ -57,6 +80,7 @@ class CarrierInfoPlusPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         CarrierInfoApi.setUp(binding.binaryMessenger, null)
+        context = null
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -79,9 +103,11 @@ class CarrierInfoPlusPlugin :
 
     // ------------------------------------------------------------ permission
 
-    override fun hasPermission(): Boolean =
-        context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
+    override fun hasPermission(): Boolean {
+        val context = this.context ?: return false
+        return context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
             PackageManager.PERMISSION_GRANTED
+    }
 
     override suspend fun requestPermission(): Boolean {
         if (hasPermission()) return true
@@ -129,6 +155,14 @@ class CarrierInfoPlusPlugin :
     // --------------------------------------------------------------- reading
 
     override fun getCarrierInfo(): PlatformCarrierInfo {
+        // Read the volatile exactly once: a detach racing with this call should
+        // not make the snapshot internally inconsistent.
+        val context = this.context
+            ?: throw FlutterError(
+                "detached",
+                "The plugin is no longer attached to a Flutter engine.",
+            )
+
         val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
         val subscriptions = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
             as? SubscriptionManager
@@ -146,7 +180,7 @@ class CarrierInfoPlusPlugin :
 
         return PlatformCarrierInfo(
             simCards = readSimCards(telephony, subscriptions, hasTelephony, granted),
-            capabilities = readCapabilities(telephony, hasTelephony),
+            capabilities = readCapabilities(context, telephony, hasTelephony),
             network = readNetwork(telephony, granted),
             support = PlatformSupportInfo(
                 carrierIdentityAvailable = hasTelephony,
@@ -285,6 +319,7 @@ class CarrierInfoPlusPlugin :
     }
 
     private fun readCapabilities(
+        context: Context,
         telephony: TelephonyManager?,
         hasTelephony: Boolean,
     ): PlatformTelephonyCapabilities {

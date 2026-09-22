@@ -886,6 +886,16 @@ interface CarrierInfoApi {
    *
    * Never throws for missing data: anything unreadable comes back null and is
    * explained through [PlatformCarrierInfo.support].
+   *
+   * Dispatched to a background thread. The implementation makes roughly
+   * fifteen binder IPC calls into the platform's telephony service, and the
+   * default queue would run all of them on the platform thread -- the host
+   * app's main thread. Each call is usually sub-millisecond, but they are IPC
+   * and can stall, and a carrier lookup has no business sitting in front of
+   * the host app's UI work.
+   *
+   * This does not change anything on the Dart side, which awaits a Future
+   * either way.
    */
   fun getCarrierInfo(): PlatformCarrierInfo
   /**
@@ -911,8 +921,9 @@ interface CarrierInfoApi {
     @JvmOverloads
     fun setUp(binaryMessenger: BinaryMessenger, api: CarrierInfoApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      val taskQueue = binaryMessenger.makeBackgroundTaskQueue()
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.carrier_info_plus.CarrierInfoApi.getCarrierInfo$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.carrier_info_plus.CarrierInfoApi.getCarrierInfo$separatedMessageChannelSuffix", codec, taskQueue)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
