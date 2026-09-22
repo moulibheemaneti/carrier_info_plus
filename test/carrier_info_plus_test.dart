@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:carrier_info_plus/carrier_info_plus.dart';
-import 'package:carrier_info_plus/carrier_info_plus_platform_interface.dart';
 import 'package:carrier_info_plus/carrier_info_plus_method_channel.dart';
+import 'package:carrier_info_plus/carrier_info_plus_platform_interface.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockCarrierInfoPlusPlatform
@@ -12,7 +12,8 @@ class MockCarrierInfoPlusPlatform
 }
 
 void main() {
-  final CarrierInfoPlusPlatform initialPlatform = CarrierInfoPlusPlatform.instance;
+  final CarrierInfoPlusPlatform initialPlatform =
+      CarrierInfoPlusPlatform.instance;
 
   test('$MethodChannelCarrierInfoPlus is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelCarrierInfoPlus>());

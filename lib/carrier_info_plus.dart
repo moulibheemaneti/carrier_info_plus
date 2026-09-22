@@ -1,4 +1,3 @@
-
 import 'carrier_info_plus_platform_interface.dart';
 
 class CarrierInfoPlus {
