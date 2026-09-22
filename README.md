@@ -7,7 +7,7 @@
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-ready-0175C2?style=flat-square&labelColor=1a1a2e)](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers)
 
 A maintained replacement for the unmaintained [`carrier_info`](https://pub.dev/packages/carrier_info),
-built for Flutter 3.44+ with Swift Package Manager support, AGP 9-ready Gradle
+built for Flutter 3.47.5+ with Swift Package Manager support, AGP 9-ready Gradle
 config on Flutter's built-in Kotlin, and typed enums instead of stringly-typed
 fields.
 
