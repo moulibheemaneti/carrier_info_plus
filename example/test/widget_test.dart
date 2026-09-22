@@ -1,26 +1,25 @@
-// This is a basic Flutter widget test.
+// Verifies the example app's widget tree builds.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// It deliberately does not assert on carrier data. No plugin is registered in
+// a widget test, so the platform call never answers and the app stays on its
+// loading state -- which is also why this pumps a single frame rather than
+// calling pumpAndSettle, whose progress indicator would spin forever.
+//
+// Anything about actual carrier values belongs in integration_test/, on a
+// device where the platform side exists.
 
 import 'package:carrier_info_plus_example/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('builds without a platform implementation', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const CarrierInfoApp());
+    await tester.pump();
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('carrier_info_plus'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 }
