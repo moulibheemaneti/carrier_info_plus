@@ -6,7 +6,7 @@
       declares both so it can demonstrate the full API.
 
       Without this line, Activity.requestPermissions() is denied immediately and
-      silently -- no dialog is ever shown -- which looks exactly like a broken
+      silently - no dialog is ever shown - which looks exactly like a broken
       button.
     -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
