@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.0
+
+Android now builds on Flutter's built-in Kotlin.
+
+### Changed
+
+- The Android module no longer applies the Kotlin Gradle plugin. Kotlin comes
+  from AGP 9 directly, or from the KGP that Flutter applies on the package's
+  behalf while `android.builtInKotlin=false`. Apps that depend on this package
+  no longer see Flutter's "plugins that apply KGP" build warning, and will keep
+  building once Flutter removes KGP support entirely.
+- **The minimum supported SDK is now Flutter 3.47.5 / Dart 3.13.4**, up from
+  Flutter 3.24 / Dart 3.5. Flutter 3.44 is where the Gradle plugin began
+  applying KGP on behalf of plugins that no longer apply it themselves, and
+  3.47 is where enabling `android.builtInKotlin=true` became supported. Apps on
+  an older Flutter should stay on 1.0.0.
+- `android/settings.gradle` pins AGP 9.4.1 for standalone builds of `android/`.
+  This does not affect consuming apps, which resolve AGP through their own
+  `settings.gradle`.
+
+The Dart API is unchanged.
+
 ## 1.0.0
 
 First release.
