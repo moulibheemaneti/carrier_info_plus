@@ -421,7 +421,28 @@ data class PlatformSimCard (
   val carrierId: Long? = null,
   val isEmbedded: Boolean,
   val isRoaming: Boolean,
-  val simState: PlatformSimState
+  val simState: PlatformSimState,
+  /**
+   * Whether this is the subscription mobile data runs over.
+   *
+   * Android resolves this from `SubscriptionManager.getDefaultDataSubscriptionId()`,
+   * which is API 24 and needs no runtime permission, so it is answerable even
+   * when the SIM list itself is not. Without that permission only one SIM is
+   * enumerated and it is the default one by construction, so the flag is
+   * still correct.
+   *
+   * Always false on iOS, which exposes no notion of a default line.
+   */
+  val isDefaultData: Boolean,
+  /**
+   * Whether this is the subscription calls are placed over.
+   *
+   * The same caveats as [isDefaultData]; Android reads
+   * `SubscriptionManager.getDefaultVoiceSubscriptionId()`. On a dual-SIM
+   * device this is routinely a different SIM from the data one, which is
+   * exactly why picking "the first SIM" is not good enough.
+   */
+  val isDefaultVoice: Boolean
 )
  {
   companion object {
@@ -437,7 +458,9 @@ data class PlatformSimCard (
       val isEmbedded = pigeonVar_list[8] as Boolean
       val isRoaming = pigeonVar_list[9] as Boolean
       val simState = pigeonVar_list[10] as PlatformSimState
-      return PlatformSimCard(subscriptionId, slotIndex, carrierName, displayName, mobileCountryCode, mobileNetworkCode, countryIso, carrierId, isEmbedded, isRoaming, simState)
+      val isDefaultData = pigeonVar_list[11] as Boolean
+      val isDefaultVoice = pigeonVar_list[12] as Boolean
+      return PlatformSimCard(subscriptionId, slotIndex, carrierName, displayName, mobileCountryCode, mobileNetworkCode, countryIso, carrierId, isEmbedded, isRoaming, simState, isDefaultData, isDefaultVoice)
     }
   }
   fun toList(): List<Any?> {
@@ -453,6 +476,8 @@ data class PlatformSimCard (
       isEmbedded,
       isRoaming,
       simState,
+      isDefaultData,
+      isDefaultVoice,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -463,7 +488,7 @@ data class PlatformSimCard (
       return true
     }
     val other = other as PlatformSimCard
-    return MessagesPigeonUtils.deepEquals(this.subscriptionId, other.subscriptionId) && MessagesPigeonUtils.deepEquals(this.slotIndex, other.slotIndex) && MessagesPigeonUtils.deepEquals(this.carrierName, other.carrierName) && MessagesPigeonUtils.deepEquals(this.displayName, other.displayName) && MessagesPigeonUtils.deepEquals(this.mobileCountryCode, other.mobileCountryCode) && MessagesPigeonUtils.deepEquals(this.mobileNetworkCode, other.mobileNetworkCode) && MessagesPigeonUtils.deepEquals(this.countryIso, other.countryIso) && MessagesPigeonUtils.deepEquals(this.carrierId, other.carrierId) && MessagesPigeonUtils.deepEquals(this.isEmbedded, other.isEmbedded) && MessagesPigeonUtils.deepEquals(this.isRoaming, other.isRoaming) && MessagesPigeonUtils.deepEquals(this.simState, other.simState)
+    return MessagesPigeonUtils.deepEquals(this.subscriptionId, other.subscriptionId) && MessagesPigeonUtils.deepEquals(this.slotIndex, other.slotIndex) && MessagesPigeonUtils.deepEquals(this.carrierName, other.carrierName) && MessagesPigeonUtils.deepEquals(this.displayName, other.displayName) && MessagesPigeonUtils.deepEquals(this.mobileCountryCode, other.mobileCountryCode) && MessagesPigeonUtils.deepEquals(this.mobileNetworkCode, other.mobileNetworkCode) && MessagesPigeonUtils.deepEquals(this.countryIso, other.countryIso) && MessagesPigeonUtils.deepEquals(this.carrierId, other.carrierId) && MessagesPigeonUtils.deepEquals(this.isEmbedded, other.isEmbedded) && MessagesPigeonUtils.deepEquals(this.isRoaming, other.isRoaming) && MessagesPigeonUtils.deepEquals(this.simState, other.simState) && MessagesPigeonUtils.deepEquals(this.isDefaultData, other.isDefaultData) && MessagesPigeonUtils.deepEquals(this.isDefaultVoice, other.isDefaultVoice)
   }
 
   override fun hashCode(): Int {
@@ -479,10 +504,12 @@ data class PlatformSimCard (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.isEmbedded)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.isRoaming)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.simState)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.isDefaultData)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.isDefaultVoice)
     return result
   }
   override fun toString(): String {
-    return "PlatformSimCard(subscriptionId=$subscriptionId, slotIndex=$slotIndex, carrierName=$carrierName, displayName=$displayName, mobileCountryCode=$mobileCountryCode, mobileNetworkCode=$mobileNetworkCode, countryIso=$countryIso, carrierId=$carrierId, isEmbedded=$isEmbedded, isRoaming=$isRoaming, simState=$simState)"
+    return "PlatformSimCard(subscriptionId=$subscriptionId, slotIndex=$slotIndex, carrierName=$carrierName, displayName=$displayName, mobileCountryCode=$mobileCountryCode, mobileNetworkCode=$mobileNetworkCode, countryIso=$countryIso, carrierId=$carrierId, isEmbedded=$isEmbedded, isRoaming=$isRoaming, simState=$simState, isDefaultData=$isDefaultData, isDefaultVoice=$isDefaultVoice)"
   }
 }
 
@@ -553,7 +580,15 @@ data class PlatformTelephonyCapabilities (
  * Generated class from Pigeon that represents data sent in messages.
  */
 data class PlatformNetworkInfo (
-  /** One entry per active data subscription. Empty when nothing is readable. */
+  /**
+   * The radio technologies currently in use, empty when nothing is readable.
+   *
+   * Deliberately not attributed to a SIM. On a dual-SIM device with two
+   * active data subscriptions there is no reliable way to say which radio
+   * belongs to which SIM across both platforms, and inventing an association
+   * would be worse than omitting one. Treat this as a property of the device,
+   * not of a subscription.
+   */
   val radioTechnologies: List<PlatformRadioAccessTechnology>,
   val operatorName: String? = null,
   val countryIso: String? = null,
@@ -619,6 +654,12 @@ data class PlatformSupportInfo (
   /**
    * Why anything above is false. This is the field that tells an app whether
    * to prompt or to hide the UI.
+   *
+   * Deliberately a single value rather than a set. More than one limitation
+   * can technically apply at once -- a simulator has no telephony hardware
+   * and no granted permission -- but only the most fundamental one is
+   * reported, because it is the one that decides what an app should do. There
+   * is no point prompting for a permission on a device with no radio.
    */
   val limitation: PlatformDataLimitation
 )
@@ -670,7 +711,27 @@ data class PlatformSupportInfo (
  * Generated class from Pigeon that represents data sent in messages.
  */
 data class PlatformCarrierInfo (
+  /**
+   * Every SIM the platform was able to describe.
+   *
+   * This can be shorter than [simCount]: a platform may know a SIM exists
+   * without being able to say anything about it. Compare the two before
+   * concluding a device is single-SIM.
+   */
   val simCards: List<PlatformSimCard>,
+  /**
+   * How many SIMs the platform says are present, or null when it cannot say.
+   *
+   * Exists because "how many SIMs" and "what are they" are separate questions
+   * with separate answers. iOS 16+ can count the cellular services it has
+   * without reporting anything identifying about them, and Android can
+   * enumerate fully but only once the per-SIM permission is granted -- the
+   * count itself needs that permission too, so it is null without it.
+   *
+   * Prefer this over `simCards.length` when asking whether a device is
+   * dual-SIM.
+   */
+  val simCount: Long? = null,
   val capabilities: PlatformTelephonyCapabilities,
   val network: PlatformNetworkInfo,
   val support: PlatformSupportInfo
@@ -679,15 +740,17 @@ data class PlatformCarrierInfo (
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): PlatformCarrierInfo {
       val simCards = pigeonVar_list[0] as List<PlatformSimCard>
-      val capabilities = pigeonVar_list[1] as PlatformTelephonyCapabilities
-      val network = pigeonVar_list[2] as PlatformNetworkInfo
-      val support = pigeonVar_list[3] as PlatformSupportInfo
-      return PlatformCarrierInfo(simCards, capabilities, network, support)
+      val simCount = pigeonVar_list[1] as Long?
+      val capabilities = pigeonVar_list[2] as PlatformTelephonyCapabilities
+      val network = pigeonVar_list[3] as PlatformNetworkInfo
+      val support = pigeonVar_list[4] as PlatformSupportInfo
+      return PlatformCarrierInfo(simCards, simCount, capabilities, network, support)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       simCards,
+      simCount,
       capabilities,
       network,
       support,
@@ -701,19 +764,20 @@ data class PlatformCarrierInfo (
       return true
     }
     val other = other as PlatformCarrierInfo
-    return MessagesPigeonUtils.deepEquals(this.simCards, other.simCards) && MessagesPigeonUtils.deepEquals(this.capabilities, other.capabilities) && MessagesPigeonUtils.deepEquals(this.network, other.network) && MessagesPigeonUtils.deepEquals(this.support, other.support)
+    return MessagesPigeonUtils.deepEquals(this.simCards, other.simCards) && MessagesPigeonUtils.deepEquals(this.simCount, other.simCount) && MessagesPigeonUtils.deepEquals(this.capabilities, other.capabilities) && MessagesPigeonUtils.deepEquals(this.network, other.network) && MessagesPigeonUtils.deepEquals(this.support, other.support)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + MessagesPigeonUtils.deepHash(this.simCards)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.simCount)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.capabilities)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.network)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.support)
     return result
   }
   override fun toString(): String {
-    return "PlatformCarrierInfo(simCards=$simCards, capabilities=$capabilities, network=$network, support=$support)"
+    return "PlatformCarrierInfo(simCards=$simCards, simCount=$simCount, capabilities=$capabilities, network=$network, support=$support)"
   }
 }
 private open class MessagesPigeonCodec : StandardMessageCodec() {

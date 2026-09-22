@@ -263,6 +263,8 @@ class PlatformSimCard {
     required this.isEmbedded,
     required this.isRoaming,
     required this.simState,
+    required this.isDefaultData,
+    required this.isDefaultVoice,
   });
 
   /// Android's stable per-subscription identifier. Null on iOS, and null on
@@ -290,6 +292,25 @@ class PlatformSimCard {
 
   PlatformSimState simState;
 
+  /// Whether this is the subscription mobile data runs over.
+  ///
+  /// Android resolves this from `SubscriptionManager.getDefaultDataSubscriptionId()`,
+  /// which is API 24 and needs no runtime permission, so it is answerable even
+  /// when the SIM list itself is not. Without that permission only one SIM is
+  /// enumerated and it is the default one by construction, so the flag is
+  /// still correct.
+  ///
+  /// Always false on iOS, which exposes no notion of a default line.
+  bool isDefaultData;
+
+  /// Whether this is the subscription calls are placed over.
+  ///
+  /// The same caveats as [isDefaultData]; Android reads
+  /// `SubscriptionManager.getDefaultVoiceSubscriptionId()`. On a dual-SIM
+  /// device this is routinely a different SIM from the data one, which is
+  /// exactly why picking "the first SIM" is not good enough.
+  bool isDefaultVoice;
+
   List<Object?> _toList() {
     return <Object?>[
       subscriptionId,
@@ -303,6 +324,8 @@ class PlatformSimCard {
       isEmbedded,
       isRoaming,
       simState,
+      isDefaultData,
+      isDefaultVoice,
     ];
   }
 
@@ -324,6 +347,8 @@ class PlatformSimCard {
       isEmbedded: result[8]! as bool,
       isRoaming: result[9]! as bool,
       simState: result[10]! as PlatformSimState,
+      isDefaultData: result[11]! as bool,
+      isDefaultVoice: result[12]! as bool,
     );
   }
 
@@ -346,7 +371,9 @@ class PlatformSimCard {
         _deepEquals(carrierId, other.carrierId) &&
         _deepEquals(isEmbedded, other.isEmbedded) &&
         _deepEquals(isRoaming, other.isRoaming) &&
-        _deepEquals(simState, other.simState);
+        _deepEquals(simState, other.simState) &&
+        _deepEquals(isDefaultData, other.isDefaultData) &&
+        _deepEquals(isDefaultVoice, other.isDefaultVoice);
   }
 
   @override
@@ -355,7 +382,7 @@ class PlatformSimCard {
 
   @override
   String toString() {
-    return 'PlatformSimCard(subscriptionId: $subscriptionId, slotIndex: $slotIndex, carrierName: $carrierName, displayName: $displayName, mobileCountryCode: $mobileCountryCode, mobileNetworkCode: $mobileNetworkCode, countryIso: $countryIso, carrierId: $carrierId, isEmbedded: $isEmbedded, isRoaming: $isRoaming, simState: $simState)';
+    return 'PlatformSimCard(subscriptionId: $subscriptionId, slotIndex: $slotIndex, carrierName: $carrierName, displayName: $displayName, mobileCountryCode: $mobileCountryCode, mobileNetworkCode: $mobileNetworkCode, countryIso: $countryIso, carrierId: $carrierId, isEmbedded: $isEmbedded, isRoaming: $isRoaming, simState: $simState, isDefaultData: $isDefaultData, isDefaultVoice: $isDefaultVoice)';
   }
 }
 
@@ -446,7 +473,13 @@ class PlatformNetworkInfo {
     required this.cellularDataState,
   });
 
-  /// One entry per active data subscription. Empty when nothing is readable.
+  /// The radio technologies currently in use, empty when nothing is readable.
+  ///
+  /// Deliberately not attributed to a SIM. On a dual-SIM device with two
+  /// active data subscriptions there is no reliable way to say which radio
+  /// belongs to which SIM across both platforms, and inventing an association
+  /// would be worse than omitting one. Treat this as a property of the device,
+  /// not of a subscription.
   List<PlatformRadioAccessTechnology> radioTechnologies;
 
   String? operatorName;
@@ -527,6 +560,12 @@ class PlatformSupportInfo {
 
   /// Why anything above is false. This is the field that tells an app whether
   /// to prompt or to hide the UI.
+  ///
+  /// Deliberately a single value rather than a set. More than one limitation
+  /// can technically apply at once -- a simulator has no telephony hardware
+  /// and no granted permission -- but only the most fundamental one is
+  /// reported, because it is the one that decides what an app should do. There
+  /// is no point prompting for a permission on a device with no radio.
   PlatformDataLimitation limitation;
 
   List<Object?> _toList() {
@@ -584,12 +623,30 @@ class PlatformSupportInfo {
 class PlatformCarrierInfo {
   PlatformCarrierInfo({
     required this.simCards,
+    this.simCount,
     required this.capabilities,
     required this.network,
     required this.support,
   });
 
+  /// Every SIM the platform was able to describe.
+  ///
+  /// This can be shorter than [simCount]: a platform may know a SIM exists
+  /// without being able to say anything about it. Compare the two before
+  /// concluding a device is single-SIM.
   List<PlatformSimCard> simCards;
+
+  /// How many SIMs the platform says are present, or null when it cannot say.
+  ///
+  /// Exists because "how many SIMs" and "what are they" are separate questions
+  /// with separate answers. iOS 16+ can count the cellular services it has
+  /// without reporting anything identifying about them, and Android can
+  /// enumerate fully but only once the per-SIM permission is granted -- the
+  /// count itself needs that permission too, so it is null without it.
+  ///
+  /// Prefer this over `simCards.length` when asking whether a device is
+  /// dual-SIM.
+  int? simCount;
 
   PlatformTelephonyCapabilities capabilities;
 
@@ -598,7 +655,7 @@ class PlatformCarrierInfo {
   PlatformSupportInfo support;
 
   List<Object?> _toList() {
-    return <Object?>[simCards, capabilities, network, support];
+    return <Object?>[simCards, simCount, capabilities, network, support];
   }
 
   Object encode() {
@@ -609,9 +666,10 @@ class PlatformCarrierInfo {
     result as List<Object?>;
     return PlatformCarrierInfo(
       simCards: (result[0]! as List<Object?>).cast<PlatformSimCard>(),
-      capabilities: result[1]! as PlatformTelephonyCapabilities,
-      network: result[2]! as PlatformNetworkInfo,
-      support: result[3]! as PlatformSupportInfo,
+      simCount: result[1] as int?,
+      capabilities: result[2]! as PlatformTelephonyCapabilities,
+      network: result[3]! as PlatformNetworkInfo,
+      support: result[4]! as PlatformSupportInfo,
     );
   }
 
@@ -625,6 +683,7 @@ class PlatformCarrierInfo {
       return true;
     }
     return _deepEquals(simCards, other.simCards) &&
+        _deepEquals(simCount, other.simCount) &&
         _deepEquals(capabilities, other.capabilities) &&
         _deepEquals(network, other.network) &&
         _deepEquals(support, other.support);
@@ -636,7 +695,7 @@ class PlatformCarrierInfo {
 
   @override
   String toString() {
-    return 'PlatformCarrierInfo(simCards: $simCards, capabilities: $capabilities, network: $network, support: $support)';
+    return 'PlatformCarrierInfo(simCards: $simCards, simCount: $simCount, capabilities: $capabilities, network: $network, support: $support)';
   }
 }
 

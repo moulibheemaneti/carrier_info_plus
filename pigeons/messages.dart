@@ -184,6 +184,8 @@ class PlatformSimCard {
     required this.isEmbedded,
     required this.isRoaming,
     required this.simState,
+    required this.isDefaultData,
+    required this.isDefaultVoice,
     this.subscriptionId,
     this.slotIndex,
     this.carrierName,
@@ -211,6 +213,25 @@ class PlatformSimCard {
   final bool isEmbedded;
   final bool isRoaming;
   final PlatformSimState simState;
+
+  /// Whether this is the subscription mobile data runs over.
+  ///
+  /// Android resolves this from `SubscriptionManager.getDefaultDataSubscriptionId()`,
+  /// which is API 24 and needs no runtime permission, so it is answerable even
+  /// when the SIM list itself is not. Without that permission only one SIM is
+  /// enumerated and it is the default one by construction, so the flag is
+  /// still correct.
+  ///
+  /// Always false on iOS, which exposes no notion of a default line.
+  final bool isDefaultData;
+
+  /// Whether this is the subscription calls are placed over.
+  ///
+  /// The same caveats as [isDefaultData]; Android reads
+  /// `SubscriptionManager.getDefaultVoiceSubscriptionId()`. On a dual-SIM
+  /// device this is routinely a different SIM from the data one, which is
+  /// exactly why picking "the first SIM" is not good enough.
+  final bool isDefaultVoice;
 }
 
 /// Pigeon equivalent of [TelephonyCapabilities].
@@ -241,7 +262,13 @@ class PlatformNetworkInfo {
     this.countryIso,
   });
 
-  /// One entry per active data subscription. Empty when nothing is readable.
+  /// The radio technologies currently in use, empty when nothing is readable.
+  ///
+  /// Deliberately not attributed to a SIM. On a dual-SIM device with two
+  /// active data subscriptions there is no reliable way to say which radio
+  /// belongs to which SIM across both platforms, and inventing an association
+  /// would be worse than omitting one. Treat this as a property of the device,
+  /// not of a subscription.
   final List<PlatformRadioAccessTechnology> radioTechnologies;
 
   final String? operatorName;
@@ -272,6 +299,12 @@ class PlatformSupportInfo {
 
   /// Why anything above is false. This is the field that tells an app whether
   /// to prompt or to hide the UI.
+  ///
+  /// Deliberately a single value rather than a set. More than one limitation
+  /// can technically apply at once -- a simulator has no telephony hardware
+  /// and no granted permission -- but only the most fundamental one is
+  /// reported, because it is the one that decides what an app should do. There
+  /// is no point prompting for a permission on a device with no radio.
   final PlatformDataLimitation limitation;
 }
 
@@ -282,9 +315,27 @@ class PlatformCarrierInfo {
     required this.capabilities,
     required this.network,
     required this.support,
+    this.simCount,
   });
 
+  /// Every SIM the platform was able to describe.
+  ///
+  /// This can be shorter than [simCount]: a platform may know a SIM exists
+  /// without being able to say anything about it. Compare the two before
+  /// concluding a device is single-SIM.
   final List<PlatformSimCard> simCards;
+
+  /// How many SIMs the platform says are present, or null when it cannot say.
+  ///
+  /// Exists because "how many SIMs" and "what are they" are separate questions
+  /// with separate answers. iOS 16+ can count the cellular services it has
+  /// without reporting anything identifying about them, and Android can
+  /// enumerate fully but only once the per-SIM permission is granted -- the
+  /// count itself needs that permission too, so it is null without it.
+  ///
+  /// Prefer this over `simCards.length` when asking whether a device is
+  /// dual-SIM.
+  final int? simCount;
   final PlatformTelephonyCapabilities capabilities;
   final PlatformNetworkInfo network;
   final PlatformSupportInfo support;

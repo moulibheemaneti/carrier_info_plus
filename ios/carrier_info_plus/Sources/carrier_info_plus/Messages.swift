@@ -338,6 +338,23 @@ struct PlatformSimCard: Hashable, CustomStringConvertible {
   var isEmbedded: Bool
   var isRoaming: Bool
   var simState: PlatformSimState
+  /// Whether this is the subscription mobile data runs over.
+  ///
+  /// Android resolves this from `SubscriptionManager.getDefaultDataSubscriptionId()`,
+  /// which is API 24 and needs no runtime permission, so it is answerable even
+  /// when the SIM list itself is not. Without that permission only one SIM is
+  /// enumerated and it is the default one by construction, so the flag is
+  /// still correct.
+  ///
+  /// Always false on iOS, which exposes no notion of a default line.
+  var isDefaultData: Bool
+  /// Whether this is the subscription calls are placed over.
+  ///
+  /// The same caveats as [isDefaultData]; Android reads
+  /// `SubscriptionManager.getDefaultVoiceSubscriptionId()`. On a dual-SIM
+  /// device this is routinely a different SIM from the data one, which is
+  /// exactly why picking "the first SIM" is not good enough.
+  var isDefaultVoice: Bool
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -353,6 +370,8 @@ struct PlatformSimCard: Hashable, CustomStringConvertible {
     let isEmbedded = pigeonVar_list[8] as! Bool
     let isRoaming = pigeonVar_list[9] as! Bool
     let simState = pigeonVar_list[10] as! PlatformSimState
+    let isDefaultData = pigeonVar_list[11] as! Bool
+    let isDefaultVoice = pigeonVar_list[12] as! Bool
 
     return PlatformSimCard(
       subscriptionId: subscriptionId,
@@ -365,7 +384,9 @@ struct PlatformSimCard: Hashable, CustomStringConvertible {
       carrierId: carrierId,
       isEmbedded: isEmbedded,
       isRoaming: isRoaming,
-      simState: simState
+      simState: simState,
+      isDefaultData: isDefaultData,
+      isDefaultVoice: isDefaultVoice
     )
   }
   func toList() -> [Any?] {
@@ -381,13 +402,15 @@ struct PlatformSimCard: Hashable, CustomStringConvertible {
       isEmbedded,
       isRoaming,
       simState,
+      isDefaultData,
+      isDefaultVoice,
     ]
   }
   static func == (lhs: PlatformSimCard, rhs: PlatformSimCard) -> Bool {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.subscriptionId, rhs.subscriptionId) && MessagesPigeonInternal.deepEquals(lhs.slotIndex, rhs.slotIndex) && MessagesPigeonInternal.deepEquals(lhs.carrierName, rhs.carrierName) && MessagesPigeonInternal.deepEquals(lhs.displayName, rhs.displayName) && MessagesPigeonInternal.deepEquals(lhs.mobileCountryCode, rhs.mobileCountryCode) && MessagesPigeonInternal.deepEquals(lhs.mobileNetworkCode, rhs.mobileNetworkCode) && MessagesPigeonInternal.deepEquals(lhs.countryIso, rhs.countryIso) && MessagesPigeonInternal.deepEquals(lhs.carrierId, rhs.carrierId) && MessagesPigeonInternal.deepEquals(lhs.isEmbedded, rhs.isEmbedded) && MessagesPigeonInternal.deepEquals(lhs.isRoaming, rhs.isRoaming) && MessagesPigeonInternal.deepEquals(lhs.simState, rhs.simState)
+    return MessagesPigeonInternal.deepEquals(lhs.subscriptionId, rhs.subscriptionId) && MessagesPigeonInternal.deepEquals(lhs.slotIndex, rhs.slotIndex) && MessagesPigeonInternal.deepEquals(lhs.carrierName, rhs.carrierName) && MessagesPigeonInternal.deepEquals(lhs.displayName, rhs.displayName) && MessagesPigeonInternal.deepEquals(lhs.mobileCountryCode, rhs.mobileCountryCode) && MessagesPigeonInternal.deepEquals(lhs.mobileNetworkCode, rhs.mobileNetworkCode) && MessagesPigeonInternal.deepEquals(lhs.countryIso, rhs.countryIso) && MessagesPigeonInternal.deepEquals(lhs.carrierId, rhs.carrierId) && MessagesPigeonInternal.deepEquals(lhs.isEmbedded, rhs.isEmbedded) && MessagesPigeonInternal.deepEquals(lhs.isRoaming, rhs.isRoaming) && MessagesPigeonInternal.deepEquals(lhs.simState, rhs.simState) && MessagesPigeonInternal.deepEquals(lhs.isDefaultData, rhs.isDefaultData) && MessagesPigeonInternal.deepEquals(lhs.isDefaultVoice, rhs.isDefaultVoice)
   }
 
   func hash(into hasher: inout Hasher) {
@@ -403,10 +426,12 @@ struct PlatformSimCard: Hashable, CustomStringConvertible {
     MessagesPigeonInternal.deepHash(value: isEmbedded, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: isRoaming, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: simState, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: isDefaultData, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: isDefaultVoice, hasher: &hasher)
   }
 
   public var description: String {
-    return "PlatformSimCard(subscriptionId: \(String(describing: subscriptionId)), slotIndex: \(String(describing: slotIndex)), carrierName: \(String(describing: carrierName)), displayName: \(String(describing: displayName)), mobileCountryCode: \(String(describing: mobileCountryCode)), mobileNetworkCode: \(String(describing: mobileNetworkCode)), countryIso: \(String(describing: countryIso)), carrierId: \(String(describing: carrierId)), isEmbedded: \(String(describing: isEmbedded)), isRoaming: \(String(describing: isRoaming)), simState: \(String(describing: simState)))"
+    return "PlatformSimCard(subscriptionId: \(String(describing: subscriptionId)), slotIndex: \(String(describing: slotIndex)), carrierName: \(String(describing: carrierName)), displayName: \(String(describing: displayName)), mobileCountryCode: \(String(describing: mobileCountryCode)), mobileNetworkCode: \(String(describing: mobileNetworkCode)), countryIso: \(String(describing: countryIso)), carrierId: \(String(describing: carrierId)), isEmbedded: \(String(describing: isEmbedded)), isRoaming: \(String(describing: isRoaming)), simState: \(String(describing: simState)), isDefaultData: \(String(describing: isDefaultData)), isDefaultVoice: \(String(describing: isDefaultVoice)))"
   }
 }
 
@@ -476,7 +501,13 @@ struct PlatformTelephonyCapabilities: Hashable, CustomStringConvertible {
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct PlatformNetworkInfo: Hashable, CustomStringConvertible {
-  /// One entry per active data subscription. Empty when nothing is readable.
+  /// The radio technologies currently in use, empty when nothing is readable.
+  ///
+  /// Deliberately not attributed to a SIM. On a dual-SIM device with two
+  /// active data subscriptions there is no reliable way to say which radio
+  /// belongs to which SIM across both platforms, and inventing an association
+  /// would be worse than omitting one. Treat this as a property of the device,
+  /// not of a subscription.
   var radioTechnologies: [PlatformRadioAccessTechnology]
   var operatorName: String? = nil
   var countryIso: String? = nil
@@ -540,6 +571,12 @@ struct PlatformSupportInfo: Hashable, CustomStringConvertible {
   var permissionGranted: Bool
   /// Why anything above is false. This is the field that tells an app whether
   /// to prompt or to hide the UI.
+  ///
+  /// Deliberately a single value rather than a set. More than one limitation
+  /// can technically apply at once -- a simulator has no telephony hardware
+  /// and no granted permission -- but only the most fundamental one is
+  /// reported, because it is the one that decides what an app should do. There
+  /// is no point prompting for a permission on a device with no radio.
   var limitation: PlatformDataLimitation
 
 
@@ -589,7 +626,23 @@ struct PlatformSupportInfo: Hashable, CustomStringConvertible {
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct PlatformCarrierInfo: Hashable, CustomStringConvertible {
+  /// Every SIM the platform was able to describe.
+  ///
+  /// This can be shorter than [simCount]: a platform may know a SIM exists
+  /// without being able to say anything about it. Compare the two before
+  /// concluding a device is single-SIM.
   var simCards: [PlatformSimCard]
+  /// How many SIMs the platform says are present, or null when it cannot say.
+  ///
+  /// Exists because "how many SIMs" and "what are they" are separate questions
+  /// with separate answers. iOS 16+ can count the cellular services it has
+  /// without reporting anything identifying about them, and Android can
+  /// enumerate fully but only once the per-SIM permission is granted -- the
+  /// count itself needs that permission too, so it is null without it.
+  ///
+  /// Prefer this over `simCards.length` when asking whether a device is
+  /// dual-SIM.
+  var simCount: Int64? = nil
   var capabilities: PlatformTelephonyCapabilities
   var network: PlatformNetworkInfo
   var support: PlatformSupportInfo
@@ -598,12 +651,14 @@ struct PlatformCarrierInfo: Hashable, CustomStringConvertible {
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> PlatformCarrierInfo? {
     let simCards = pigeonVar_list[0] as! [PlatformSimCard]
-    let capabilities = pigeonVar_list[1] as! PlatformTelephonyCapabilities
-    let network = pigeonVar_list[2] as! PlatformNetworkInfo
-    let support = pigeonVar_list[3] as! PlatformSupportInfo
+    let simCount: Int64? = nilOrValue(pigeonVar_list[1])
+    let capabilities = pigeonVar_list[2] as! PlatformTelephonyCapabilities
+    let network = pigeonVar_list[3] as! PlatformNetworkInfo
+    let support = pigeonVar_list[4] as! PlatformSupportInfo
 
     return PlatformCarrierInfo(
       simCards: simCards,
+      simCount: simCount,
       capabilities: capabilities,
       network: network,
       support: support
@@ -612,6 +667,7 @@ struct PlatformCarrierInfo: Hashable, CustomStringConvertible {
   func toList() -> [Any?] {
     return [
       simCards,
+      simCount,
       capabilities,
       network,
       support,
@@ -621,19 +677,20 @@ struct PlatformCarrierInfo: Hashable, CustomStringConvertible {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.simCards, rhs.simCards) && MessagesPigeonInternal.deepEquals(lhs.capabilities, rhs.capabilities) && MessagesPigeonInternal.deepEquals(lhs.network, rhs.network) && MessagesPigeonInternal.deepEquals(lhs.support, rhs.support)
+    return MessagesPigeonInternal.deepEquals(lhs.simCards, rhs.simCards) && MessagesPigeonInternal.deepEquals(lhs.simCount, rhs.simCount) && MessagesPigeonInternal.deepEquals(lhs.capabilities, rhs.capabilities) && MessagesPigeonInternal.deepEquals(lhs.network, rhs.network) && MessagesPigeonInternal.deepEquals(lhs.support, rhs.support)
   }
 
   func hash(into hasher: inout Hasher) {
     hasher.combine("PlatformCarrierInfo")
     MessagesPigeonInternal.deepHash(value: simCards, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: simCount, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: capabilities, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: network, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: support, hasher: &hasher)
   }
 
   public var description: String {
-    return "PlatformCarrierInfo(simCards: \(String(describing: simCards)), capabilities: \(String(describing: capabilities)), network: \(String(describing: network)), support: \(String(describing: support)))"
+    return "PlatformCarrierInfo(simCards: \(String(describing: simCards)), simCount: \(String(describing: simCount)), capabilities: \(String(describing: capabilities)), network: \(String(describing: network)), support: \(String(describing: support)))"
   }
 }
 
