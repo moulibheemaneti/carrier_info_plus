@@ -24,8 +24,7 @@ final class CarrierInfo {
         simCards: <SimCard>[
           for (final sim in asMapList(map['simCards'])) SimCard.fromMap(sim),
         ],
-        capabilities:
-            TelephonyCapabilities.fromMap(asMap(map['capabilities'])),
+        capabilities: TelephonyCapabilities.fromMap(asMap(map['capabilities'])),
         network: NetworkInfo.fromMap(asMap(map['network'])),
         support: PlatformSupport.fromMap(asMap(map['support'])),
       );

@@ -110,6 +110,10 @@ final class PlatformSupport {
           other.limitation == limitation;
 
   @override
-  int get hashCode => Object.hash(carrierIdentityAvailable, perSimDataAvailable,
-      permissionGranted, limitation);
+  int get hashCode => Object.hash(
+        carrierIdentityAvailable,
+        perSimDataAvailable,
+        permissionGranted,
+        limitation,
+      );
 }

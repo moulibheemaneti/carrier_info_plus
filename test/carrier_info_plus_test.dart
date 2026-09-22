@@ -130,8 +130,10 @@ void main() {
       final CarrierInfo info = await CarrierInfoPlus.get();
 
       expect(info.primarySim?.state, SimState.ready);
-      expect(info.network.radioTechnologies,
-          <RadioAccessTechnology>[RadioAccessTechnology.lte, RadioAccessTechnology.nr]);
+      expect(info.network.radioTechnologies, <RadioAccessTechnology>[
+        RadioAccessTechnology.lte,
+        RadioAccessTechnology.nr,
+      ]);
       expect(info.network.cellularDataState, CellularDataState.notRestricted);
       expect(info.support.limitation, DataLimitation.none);
     });
@@ -200,9 +202,13 @@ void main() {
     });
 
     test('a partial payload fills in defaults rather than throwing', () async {
-      mockChannel((MethodCall call) async => <String, Object?>{
-            'simCards': <Object?>[<String, Object?>{'carrierName': 'Vi'}],
-          });
+      mockChannel(
+        (MethodCall call) async => <String, Object?>{
+          'simCards': <Object?>[
+            <String, Object?>{'carrierName': 'Vi'},
+          ],
+        },
+      );
 
       final CarrierInfo info = await CarrierInfoPlus.get();
 
@@ -213,28 +219,34 @@ void main() {
     });
 
     test('an unrecognised enum name falls back instead of throwing', () async {
-      mockChannel((MethodCall call) async => <String, Object?>{
-            'simCards': <Object?>[
-              <String, Object?>{'simState': 'someFutureAndroidState'},
-            ],
-            'network': <String, Object?>{
-              'radioTechnologies': <Object?>['6g'],
-            },
-          });
+      mockChannel(
+        (MethodCall call) async => <String, Object?>{
+          'simCards': <Object?>[
+            <String, Object?>{'simState': 'someFutureAndroidState'},
+          ],
+          'network': <String, Object?>{
+            'radioTechnologies': <Object?>['6g'],
+          },
+        },
+      );
 
       final CarrierInfo info = await CarrierInfoPlus.get();
 
       expect(info.primarySim?.state, SimState.unknown);
-      expect(info.network.radioTechnologies,
-          <RadioAccessTechnology>[RadioAccessTechnology.unknown]);
+      expect(
+        info.network.radioTechnologies,
+        <RadioAccessTechnology>[RadioAccessTechnology.unknown],
+      );
     });
 
     test('empty strings from the platform read as null', () async {
-      mockChannel((MethodCall call) async => <String, Object?>{
-            'simCards': <Object?>[
-              <String, Object?>{'carrierName': '', 'countryIso': ''},
-            ],
-          });
+      mockChannel(
+        (MethodCall call) async => <String, Object?>{
+          'simCards': <Object?>[
+            <String, Object?>{'carrierName': '', 'countryIso': ''},
+          ],
+        },
+      );
 
       final CarrierInfo info = await CarrierInfoPlus.get();
 

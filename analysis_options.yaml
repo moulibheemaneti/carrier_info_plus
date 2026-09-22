@@ -9,6 +9,10 @@ analyzer:
     # A package's public surface is its contract, so an undocumented member is
     # a bug report waiting to happen. Fail the build, not the review.
     public_member_api_docs: error
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
 
 linter:
   rules:

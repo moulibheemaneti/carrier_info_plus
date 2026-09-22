@@ -70,6 +70,12 @@ final class TelephonyCapabilities {
           other.supportsEmbeddedSim == supportsEmbeddedSim;
 
   @override
-  int get hashCode => Object.hash(isVoiceCapable, isSmsCapable, isDataCapable,
-      isDataEnabled, isMultiSimSupported, supportsEmbeddedSim);
+  int get hashCode => Object.hash(
+        isVoiceCapable,
+        isSmsCapable,
+        isDataCapable,
+        isDataEnabled,
+        isMultiSimSupported,
+        supportsEmbeddedSim,
+      );
 }
