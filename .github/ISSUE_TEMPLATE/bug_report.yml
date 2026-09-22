@@ -1,0 +1,109 @@
+name: Bug report
+description: Report a defect in carrier_info_plus
+title: "bug: <short description>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! A complete report is much faster to fix.
+        Please fill in every section — issues missing version info, device details, or repro steps will be closed.
+
+        Before filing: check the README's platform support table. A field that is
+        null on iOS 16+ or null without `READ_PHONE_STATE` on Android is usually
+        the OS withholding it, not a bug in this package.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: On a dual-SIM Pixel with READ_PHONE_STATE granted, simCards only ever contains one entry…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Paste a minimal `main.dart` (or a link to a gist / repo) that reproduces the issue.
+        Tests are great too.
+      render: dart
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Actual CarrierInfo output
+      description: |
+        Paste the result of `(await CarrierInfoPlus.get()).toString()`, including
+        `platformSupport`. Redact anything you consider identifying (MCC/MNC and
+        display name are usually fine; redact identifiers if unsure).
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: carrier_info_plus version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version
+      description: Real device, please — emulators and simulators report no SIM.
+      placeholder: "Pixel 7 / Android 15"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sim-setup
+    attributes:
+      label: SIM setup
+      options:
+        - Single physical SIM
+        - Dual physical SIM
+        - Physical SIM + eSIM
+        - eSIM only
+        - No SIM
+    validations:
+      required: true
+
+  - type: dropdown
+    id: permission
+    attributes:
+      label: Is READ_PHONE_STATE granted? (Android)
+      options:
+        - "Yes"
+        - "No"
+        - "Not applicable (iOS)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: flutter-doctor
+    attributes:
+      label: Output of `flutter doctor -v`
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: Console output, if any. Wrap secrets / personal info.
+      render: shell
