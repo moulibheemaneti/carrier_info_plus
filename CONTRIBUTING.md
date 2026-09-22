@@ -26,19 +26,32 @@ fvm flutter pub get
 # Run tests
 fvm flutter test
 
-# Run the example app (needs a real device — emulators have no SIM)
+# Run the example app
 cd example && fvm flutter run
 ```
+
+The Android emulator ships a fake T-Mobile SIM (MCC 310, MNC 260) and reports a
+carrier, country, SIM state and radio technology, so most development needs no
+hardware at all. What it does not emulate is dual-SIM, eSIM or roaming, and it
+reports `isMultiSimSupported` and `supportsEmbeddedSim` as false regardless of
+what the host machine can do.
+
+The iOS Simulator is the opposite case: it has no cellular hardware, so every
+cellular field is empty there. iOS behaviour has to be checked on a device.
 
 If you don't use FVM, plain `flutter` works too — just make sure your version satisfies the SDK constraint in `pubspec.yaml`.
 
 ## Project structure
 
 ```
+pigeons/
+  messages.dart                # the contract; all three sides generate from it
 lib/
   carrier_info_plus.dart       # public barrel
   src/
-    carrier_info_plus.dart     # CarrierInfoPlus entry point + method channel
+    carrier_info_plus.dart     # CarrierInfoPlus entry point
+    messages.g.dart            # generated, internal, never exported
+    mapping.dart               # generated -> public; the only file seeing both
     models/
       carrier_info.dart        # top-level snapshot
       sim_card.dart            # per-SIM data
@@ -46,17 +59,35 @@ lib/
       telephony_capabilities.dart
       platform_support.dart    # what the platform could answer, and why not
       enums.dart               # SimState, RadioAccessTechnology, …
-      parsing.dart             # platform payload -> models
-android/                       # CarrierInfoPlusPlugin.kt
-ios/                           # CarrierInfoPlusPlugin.swift (SwiftPM + CocoaPods)
-test/                          # unit tests over decoded platform payloads
+android/                       # CarrierInfoPlusPlugin.kt + generated Messages.kt
+ios/                           # CarrierInfoPlusPlugin.swift + generated Messages.swift
+test/                          # unit tests over the mapping layer
 example/                       # runnable demo app
 ```
 
-Platform code is deliberately thin: it collects raw values and ships them over
-the method channel. Derivation (e.g. mapping a radio technology to a network
-generation) lives in Dart so both platforms behave identically and stays
-testable without a device.
+Platform code is deliberately thin: it collects raw values and hands them to
+the generated pigeon bindings. Derivation (e.g. mapping a radio technology to a
+network generation) lives in Dart so both platforms behave identically and
+stays testable without a device.
+
+### Regenerating the platform contract
+
+`pigeons/messages.dart` is the single source of truth for the platform
+boundary. After editing it:
+
+```bash
+fvm dart run pigeon --input pigeons/messages.dart
+fvm dart format .
+```
+
+The format pass is not optional. Pigeon's Dart output does not match
+`dart format`, so skipping it fails CI on a file you did not write by hand.
+
+Generated files are committed, because consuming apps do not run codegen, and
+are never edited directly. They are also never exported: pigeon reserves the
+right to change generated code between releases, so `lib/src/models/` is the
+stable public surface and `lib/src/mapping.dart` is the only file that sees
+both sides.
 
 ## Pre-commit hooks
 
@@ -77,9 +108,15 @@ If any hook fails, the commit is blocked. Fix the issue and re-stage — don't `
 - `dart format --set-exit-if-changed`
 - `flutter analyze --fatal-infos`
 - `flutter test`
-- `pana` with `--exit-code-threshold 0` (a perfect pub score is required)
-- a debug Android build of `example/`
+- `pana`, pinned, with `--exit-code-threshold 5`
+- a debug Android build of `example/`, under `android.builtInKotlin` both
+  `false` and `true`
 - a no-codesign iOS build of `example/`, against Swift Package Manager
+
+The pana threshold is 5 rather than 0 only because `CHANGELOG.md` cannot
+reference the current version until release-please writes that entry, which
+costs exactly five points. Every other category scores full marks, so the gate
+still fails on any new regression. Restore 0 once 2.0.0 is released.
 
 ## Commit messages
 
@@ -116,7 +153,8 @@ Before opening a PR, make sure:
 - [ ] `fvm flutter test` passes locally
 - [ ] New public APIs have dartdoc comments
 - [ ] New behavior has a test in `test/`
-- [ ] Platform-specific behavior is verified on a real device (emulators report no SIM)
+- [ ] Platform-specific behavior is verified — the Android emulator covers the
+      single-SIM path; dual-SIM, eSIM, roaming and anything on iOS need hardware
 - [ ] PR title follows Conventional Commits
 
 You do **not** need to bump `pubspec.yaml` or edit `CHANGELOG.md` — release-please does both.

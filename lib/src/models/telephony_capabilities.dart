@@ -1,9 +1,4 @@
-import 'parsing.dart';
-
-/// What the device's telephony hardware and settings allow.
-///
-/// These describe the device, not any particular SIM, and none of them require
-/// a SIM to be present.
+/// What the device's cellular hardware can do, independent of any SIM.
 final class TelephonyCapabilities {
   /// Creates a [TelephonyCapabilities].
   const TelephonyCapabilities({
@@ -14,17 +9,6 @@ final class TelephonyCapabilities {
     this.isMultiSimSupported = false,
     this.supportsEmbeddedSim = false,
   });
-
-  /// Decodes from a platform channel map.
-  factory TelephonyCapabilities.fromMap(Map<String, Object?> map) =>
-      TelephonyCapabilities(
-        isVoiceCapable: asBool(map['isVoiceCapable']),
-        isSmsCapable: asBool(map['isSmsCapable']),
-        isDataCapable: asBool(map['isDataCapable']),
-        isDataEnabled: asBool(map['isDataEnabled']),
-        isMultiSimSupported: asBool(map['isMultiSimSupported']),
-        supportsEmbeddedSim: asBool(map['supportsEmbeddedSim']),
-      );
 
   /// Whether the device can place circuit-switched calls.
   ///
@@ -39,9 +23,10 @@ final class TelephonyCapabilities {
 
   /// Whether mobile data is currently switched on by the user.
   ///
-  /// Requires `READ_PHONE_STATE` on Android; false when not granted. Always
-  /// false on iOS, which exposes no equivalent — use
-  /// `CarrierInfo.network.cellularDataState` there instead.
+  /// On Android this needs one of `ACCESS_NETWORK_STATE`, `MODIFY_PHONE_STATE`
+  /// or `READ_BASIC_PHONE_STATE` — notably *not* `READ_PHONE_STATE` — and is
+  /// false when the app declares none of them. Always false on iOS, which
+  /// exposes no equivalent; use [NetworkInfo.cellularDataState] there.
   final bool isDataEnabled;
 
   /// Whether the hardware supports more than one active SIM.
@@ -50,13 +35,13 @@ final class TelephonyCapabilities {
   /// card in it still reports true.
   final bool isMultiSimSupported;
 
-  /// Whether the device can provision an eSIM profile.
+  /// Whether the device supports eSIM.
   final bool supportsEmbeddedSim;
 
   @override
   String toString() =>
-      'TelephonyCapabilities(voice: $isVoiceCapable, '
-      'sms: $isSmsCapable, data: $isDataCapable, dataEnabled: $isDataEnabled, '
+      'TelephonyCapabilities(voice: $isVoiceCapable, sms: $isSmsCapable, '
+      'data: $isDataCapable, dataEnabled: $isDataEnabled, '
       'multiSim: $isMultiSimSupported, eSIM: $supportsEmbeddedSim)';
 
   @override

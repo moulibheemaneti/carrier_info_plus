@@ -1,5 +1,3 @@
-import 'parsing.dart';
-
 /// Why a platform could not supply carrier identity.
 ///
 /// Carrier data goes missing for reasons you can fix and reasons you cannot,
@@ -10,24 +8,17 @@ enum DataLimitation {
   none,
 
   /// Android only. `READ_PHONE_STATE` has not been granted, so per-SIM data is
-  /// unavailable. Recoverable — call `CarrierInfoPlus.requestPermission()`.
+  /// unavailable. Recoverable — call [CarrierInfoPlus.requestPermission].
   permissionNotGranted,
 
   /// iOS 16+. Apple removed `CTCarrier`, so carrier name, MCC, MNC and country
   /// are gone for good. Not recoverable by any app.
   platformRemovedApi,
 
-  /// The device has no cellular hardware — a Wi-Fi-only tablet or a simulator.
+  /// The device has no cellular hardware — a Wi-Fi-only tablet, or the iOS
+  /// Simulator. Note the Android emulator does *not* land here: it reports a
+  /// fake T-Mobile SIM.
   noTelephonyHardware;
-
-  /// Resolves a platform-supplied name, falling back to [none].
-  static DataLimitation fromName(String? name) {
-    if (name == null) return DataLimitation.none;
-    for (final value in DataLimitation.values) {
-      if (value.name == name) return value;
-    }
-    return DataLimitation.none;
-  }
 
   /// Whether the app can do something about this limitation.
   ///
@@ -41,8 +32,7 @@ enum DataLimitation {
   String get explanation => switch (this) {
     DataLimitation.none => 'All available data was reported.',
     DataLimitation.permissionNotGranted =>
-      'READ_PHONE_STATE has not been granted, so per-SIM data is '
-          'unavailable.',
+      'READ_PHONE_STATE has not been granted, so per-SIM data is unavailable.',
     DataLimitation.platformRemovedApi =>
       'Apple removed CTCarrier in iOS 16, so carrier identity is no longer '
           'available to any app.',
@@ -64,14 +54,6 @@ final class PlatformSupport {
     this.permissionGranted = false,
     this.limitation = DataLimitation.none,
   });
-
-  /// Decodes from a platform channel map.
-  factory PlatformSupport.fromMap(Map<String, Object?> map) => PlatformSupport(
-    carrierIdentityAvailable: asBool(map['carrierIdentityAvailable']),
-    perSimDataAvailable: asBool(map['perSimDataAvailable']),
-    permissionGranted: asBool(map['permissionGranted']),
-    limitation: DataLimitation.fromName(asString(map['limitation'])),
-  );
 
   /// Whether carrier name, MCC, MNC and country could be read.
   ///

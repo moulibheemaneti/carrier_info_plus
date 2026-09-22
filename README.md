@@ -13,8 +13,8 @@ fields.
 
 > [!IMPORTANT]
 > **This is not a drop-in replacement.** The `_plus` suffix usually signals a
-> compatible fork; this one is a ground-up rewrite with a different API. The
-> old package advertised a lot of fields that modern Android and iOS no longer
+> compatible fork; this one is a ground-up rewrite with a different API. The old
+> package advertised a lot of fields that modern Android and iOS no longer
 > populate, and carrying those forward would have meant shipping a contract we
 > could not honour. See [Migrating](#migrating-from-carrier_info) below.
 
@@ -32,7 +32,8 @@ maintained the plugin is.
 | MCC / MNC | ✅ | ❌ removed by Apple |
 | Country ISO | ✅ | ❌ removed by Apple |
 | Per-SIM enumeration (dual SIM) | ✅ | ❌ count only |
-| SIM state | ✅ | ⚠️ inferred |
+| Which SIM is default for data / voice | ✅ | ❌ |
+| SIM state | ✅ | ❌ |
 | Roaming | ✅ | ❌ |
 | Radio technology (LTE / 5G NR) | ✅ | ✅ |
 | Network generation | ✅ | ✅ |
@@ -40,8 +41,8 @@ maintained the plugin is.
 | SMS / voice capability | ✅ | ✅ |
 | Cellular data availability | ✅ | ✅ |
 
-Rather than handing you a struct full of unexplained nulls, every result
-carries a `support` block telling you **what was answerable and why**:
+Rather than handing you a struct full of unexplained nulls, every result carries
+a `support` block telling you **what was answerable and why not**:
 
 ```dart
 final info = await CarrierInfoPlus.get();
@@ -63,32 +64,20 @@ mean completely different things in a UI.
 
 ## Install
 
-Available on pub.dev: **<https://pub.dev/packages/carrier_info_plus>**
-
 ```bash
 flutter pub add carrier_info_plus
 ```
 
-Or add it to your `pubspec.yaml` by hand:
+**No iOS setup required.** SwiftPM and CocoaPods are both supported, so it works
+whether or not your app has migrated.
 
-```yaml
-dependencies:
-  carrier_info_plus: ^1.0.0
-```
-
-**No iOS setup required.** SwiftPM and CocoaPods are both supported, so it
-works whether or not your app has migrated.
-
-**No Android Gradle setup required either.** This package does not apply the
-Kotlin Gradle plugin, so it builds whichever way your app is configured:
+**No Android Gradle setup required either.** This package applies no Kotlin
+Gradle plugin of its own, so it builds whichever way your app is configured:
 
 | Your app's `android.builtInKotlin` | Who compiles this package's Kotlin |
 | --- | --- |
 | `true` | AGP 9, directly |
 | `false` (what `flutter create` writes today) | Flutter, by applying KGP for us |
-
-Flutter warns about packages that apply KGP themselves and will eventually
-refuse to build them. This one is not on that list.
 
 ### Android permissions
 
@@ -112,6 +101,15 @@ if (!await CarrierInfoPlus.hasPermission()) {
 }
 ```
 
+One optional extra: `capabilities.isDataEnabled` and `network.cellularDataState`
+are read through an API that accepts `ACCESS_NETWORK_STATE` rather than
+`READ_PHONE_STATE`. That one is install-time and never prompts, so declare it if
+you want those two fields:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+```
+
 ---
 
 ## Usage
@@ -130,37 +128,69 @@ print(info.network.cellularDataState);    // CellularDataState.notRestricted
 print(info.capabilities.isMultiSimSupported);  // bool, not a String
 print(info.capabilities.supportsEmbeddedSim);
 
+// The SIM your data actually runs over — not merely the first one
+print(info.primarySim?.carrierName);
+print(info.voiceSim?.carrierName);             // often a different SIM
+
 // Per-SIM — Android
 for (final sim in info.simCards) {
   print('${sim.slotIndex}: ${sim.carrierName} (${sim.plmn})');
   print('eSIM: ${sim.isEmbedded}, roaming: ${sim.isRoaming}');
 }
+
+// How many SIMs exist, which can exceed how many could be described
+print(info.simCount);
 ```
 
 `get()` returns a **snapshot**, not a live view. Nothing is cached, because SIM
 and network state change underneath you — re-read after a SIM swap or when
 returning from the background.
 
-It never throws for the ordinary "cannot answer" cases. An unsupported
-platform, a missing permission and a device with no radio all come back as a
-populated `CarrierInfo` whose `support` block explains the gap. A
-`PlatformException` still propagates, because that means something genuinely
-broke.
+It never throws for the ordinary "cannot answer" cases. An unsupported platform,
+a missing permission and a device with no radio all come back as a populated
+`CarrierInfo` whose `support` block explains the gap. A `PlatformException`
+still propagates, because that means something genuinely broke.
+
+### `simCount` versus `simCards.length`
+
+They answer different questions, and on iOS they differ:
+
+```dart
+info.simCount        // 2  — the platform knows there are two services
+info.simCards.length // 0  — it will not describe either of them
+```
+
+Use `simCount` (or `isDualSimActive`, which prefers it) when asking *how many*.
+Use `simCards` when you need to render something about each one.
+
+---
+
+## Migrating from 1.x
+
+The shape is unchanged; four things moved.
+
+| Change | Why |
+|---|---|
+| `primarySim` is now the SIM flagged `isDefaultData`, falling back to the first | 1.x returned `simCards.first`, which names the wrong carrier on a dual-SIM phone running data on slot 2 |
+| `voiceSim`, `SimCard.isDefaultData`, `SimCard.isDefaultVoice` added | Voice and data routinely use different SIMs |
+| `CarrierInfo.simCount` added; iOS no longer emits placeholder `SimCard`s | iOS can count services without identifying them. 1.x returned entries with every field null; now the list is empty and the count is real |
+| `RadioAccessTechnology.lteCa` removed, `nrNsa` added | `lteCa` had no public constant on either platform and could never be reported. `nrNsa` is non-standalone 5G, which iOS names and Android reports as `lte` |
+
+The minimum SDK is now Flutter 3.47.5 / Dart 3.13.4.
 
 ---
 
 ## Migrating from `carrier_info`
 
-The platform split is gone. Both `getAndroidInfo()` and `getIosInfo()` map to the same `CarrierInfoPlus.get()` — that repetition in the table is deliberate, not a typo. [Why](#why-one-call-for-both-platforms)
+The platform split is gone. Both `getAndroidInfo()` and `getIosInfo()` map to
+the same `CarrierInfoPlus.get()`.
 
 | `carrier_info` | `carrier_info_plus` |
 |---|---|
 | `CarrierInfo.getAndroidInfo()` | `CarrierInfoPlus.get()` |
 | `CarrierInfo.getIosInfo()` | `CarrierInfoPlus.get()` |
 | `AndroidCarrierData.subscriptionsInfo` | `CarrierInfo.simCards` |
-| `AndroidCarrierData.telephonyInfo` | `CarrierInfo.network` + `CarrierInfo.simCards` |
 | `AndroidCarrierData.isMultiSimSupported` *(String)* | `capabilities.isMultiSimSupported` *(bool)* |
-| `AndroidCarrierData.isVoiceCapable` | `capabilities.isVoiceCapable` |
 | `TelephonyInfo.networkGeneration` *(String)* | `network.generation` *(`NetworkGeneration`)* |
 | `TelephonyInfo.radioType` *(String)* | `network.radioTechnologies` *(`List<RadioAccessTechnology>`)* |
 | `TelephonyInfo.simState` *(String)* | `SimCard.state` *(`SimState`)* |
@@ -169,53 +199,15 @@ The platform split is gone. Both `getAndroidInfo()` and `getIosInfo()` map to th
 | `IosCarrierData.isSIMInserted` | `CarrierInfo.hasSim` |
 | `toMap()['_ios_version_info']` | `CarrierInfo.support` |
 
-### Why one call for both platforms
-
-The old API made you branch on platform to ask one question:
-
-```dart
-String? name;
-if (Platform.isAndroid) {
-  final d = await CarrierInfo.getAndroidInfo();
-  name = d?.telephonyInfo.first.carrierName;
-} else {
-  final d = await CarrierInfo.getIosInfo();
-  name = d?.carrierData?.first.carrierName;
-}
-```
-
-Two return types, two field paths, two sets of null checks. Now:
-
-```dart
-final info = await CarrierInfoPlus.get();
-final name = info.primarySim?.carrierName;
-```
-
 The platform difference hasn't vanished — it moved out of the *type* and into
-the *data*. iOS returns fewer populated fields, and `support` says why.
-
-That's the better axis, because platform was never the thing that actually
-varied:
-
-| | Carrier name |
-|---|---|
-| Android, `READ_PHONE_STATE` granted | ✅ populated |
-| Android, permission denied | ❌ null |
-| iOS 16+ | ❌ null |
-
-**Android already has the partial-data problem on its own.** Splitting by
-platform never spared you from handling it — you just had to handle it again
-inside the Android branch, unaided. One shape with one `support` block covers
-all three rows, and adding a platform later is a new `DataLimitation` value
-rather than a new class and a new branch in every app.
-
-You can still branch on `Platform.isIOS` if you want. But
-`info.support.carrierIdentityAvailable` is the better condition: it tests the
-thing you actually care about instead of a proxy for it.
+the *data*. iOS returns fewer populated fields, and `support` says why. You can
+still branch on `Platform.isIOS`, but `info.support.carrierIdentityAvailable` is
+the better condition: it tests the thing you care about rather than a proxy for
+it.
 
 ### Fields with no replacement
 
-These were removed because they no longer return data on a current OS:
+Removed because they no longer return data on a current OS:
 
 | Removed | Why |
 |---|---|
@@ -225,7 +217,7 @@ These were removed because they no longer return data on a current OS:
 | iOS `subscriberIdentifiers`, `carrierTokens` | Not obtainable on modern iOS |
 
 You can also **delete five permissions** from your manifest. This package needs
-only `READ_PHONE_STATE`, and only if you want per-SIM data. In particular, drop
+only `READ_PHONE_STATE`, and only for per-SIM data. In particular drop
 `READ_PRIVILEGED_PHONE_STATE` — it is signature-level, so no Play Store app can
 ever hold it, and listing it invites Play Console review questions for nothing.
 
@@ -237,17 +229,37 @@ Apple deprecated `CTCarrier` in iOS 16. `carrierName` returns `"--"`,
 `mobileCountryCode` and `mobileNetworkCode` return nil, and
 `serviceSubscriberCellularProviders` went with them.
 
-This package deliberately ships **no deprecated fallback** for iOS 13-15. Two
+This package deliberately ships **no deprecated fallback** for older iOS. Two
 reasons: behaviour shouldn't silently change under your users as they update,
-and calling deprecated CoreTelephony API is a build break waiting to happen
-when Apple finally removes it. iOS reports carrier identity as unavailable on
-every version, consistently.
+and calling deprecated CoreTelephony API is a build break waiting to happen when
+Apple finally removes it. iOS reports carrier identity as unavailable on every
+version, consistently.
 
 What remains genuinely readable on iOS is real and useful: radio access
-technology per active service, eSIM provisioning support, SMS capability, and
-whether your app may use cellular data.
+technology per active service, how many services there are, eSIM provisioning
+support, SMS capability, and whether your app may use cellular data.
 
 ---
+
+## Development
+
+Run the example app to see every field this package exposes against your own
+device:
+
+```bash
+cd example && flutter run
+```
+
+The **Android emulator** ships a fake T-Mobile SIM (MCC 310, MNC 260) and
+reports a carrier, country, SIM state and radio technology, so most development
+needs no hardware. It does not emulate dual-SIM, eSIM or roaming, and reports
+`isMultiSimSupported` and `supportsEmbeddedSim` as false regardless.
+
+The **iOS Simulator** has no cellular hardware at all, so every field is empty
+and `limitation` is `noTelephonyHardware`. iOS behaviour has to be checked on a
+device.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full setup.
 
 ## Contributing
 

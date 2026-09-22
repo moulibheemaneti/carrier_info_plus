@@ -1,10 +1,6 @@
 import 'enums.dart';
-import 'parsing.dart';
 
-/// The cellular network the device is attached to right now.
-///
-/// Unlike [SimCard], which describes what is in the device, this describes what
-/// the device is connected to — the two differ while roaming.
+/// The network the device is currently attached to.
 final class NetworkInfo {
   /// Creates a [NetworkInfo].
   const NetworkInfo({
@@ -14,35 +10,17 @@ final class NetworkInfo {
     this.cellularDataState = CellularDataState.unknown,
   });
 
-  /// Decodes from a platform channel map.
-  factory NetworkInfo.fromMap(Map<String, Object?> map) => NetworkInfo(
-    radioTechnologies: <RadioAccessTechnology>[
-      for (final name in asStringList(map['radioTechnologies']))
-        RadioAccessTechnology.fromName(name),
-    ],
-    operatorName: asString(map['operatorName']),
-    countryIso: asString(map['countryIso']),
-    cellularDataState: CellularDataState.fromName(
-      asString(map['cellularDataState']),
-    ),
-  );
-
-  /// Active radio technologies, one per active cellular service.
+  /// The radio technologies currently in use.
   ///
-  /// A dual-SIM device using both subscriptions reports two entries. Empty when
-  /// the device has no cellular service, or on Android when `READ_PHONE_STATE`
-  /// has not been granted.
+  /// A property of the device, not of any one SIM: neither platform reliably
+  /// says which radio belongs to which subscription.
   final List<RadioAccessTechnology> radioTechnologies;
 
-  /// Name of the network currently serving the device.
-  ///
-  /// While roaming this is the visited network, not the SIM's home carrier.
-  /// Null on iOS.
+  /// The registered operator's name, which can differ from the SIM's carrier
+  /// name while roaming.
   final String? operatorName;
 
-  /// ISO 3166-1 alpha-2 country code of the serving network, lowercase.
-  ///
-  /// Null on iOS.
+  /// ISO 3166-1 alpha-2 country code of the registered network, lowercase.
   final String? countryIso;
 
   /// Whether this app may use cellular data.
@@ -50,7 +28,7 @@ final class NetworkInfo {
 
   /// The fastest generation among [radioTechnologies].
   ///
-  /// On a dual-SIM device connected over both LTE and 5G this reports
+  /// On a dual-SIM device attached over both LTE and 5G this reports
   /// [NetworkGeneration.fiveG] — the best the device currently has.
   NetworkGeneration get generation {
     var best = NetworkGeneration.unknown;
@@ -70,18 +48,25 @@ final class NetworkInfo {
 
   @override
   String toString() =>
-      'NetworkInfo(generation: ${generation.name}, '
-      'radios: ${radioTechnologies.map((RadioAccessTechnology t) => t.name).toList()}, '
-      'operator: $operatorName, data: ${cellularDataState.name})';
+      'NetworkInfo(operator: $operatorName, country: $countryIso, '
+      'generation: ${generation.name}, data: ${cellularDataState.name})';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is NetworkInfo &&
+          _sameTechnologies(other.radioTechnologies) &&
           other.operatorName == operatorName &&
           other.countryIso == countryIso &&
-          other.cellularDataState == cellularDataState &&
-          _listEquals(other.radioTechnologies, radioTechnologies);
+          other.cellularDataState == cellularDataState;
+
+  bool _sameTechnologies(List<RadioAccessTechnology> other) {
+    if (other.length != radioTechnologies.length) return false;
+    for (var i = 0; i < other.length; i++) {
+      if (other[i] != radioTechnologies[i]) return false;
+    }
+    return true;
+  }
 
   @override
   int get hashCode => Object.hash(
@@ -90,12 +75,4 @@ final class NetworkInfo {
     countryIso,
     cellularDataState,
   );
-}
-
-bool _listEquals(List<RadioAccessTechnology> a, List<RadioAccessTechnology> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

@@ -12,7 +12,7 @@ enum NetworkGeneration {
   /// UMTS, HSPA family, EV-DO, TD-SCDMA.
   threeG,
 
-  /// LTE and LTE-Advanced.
+  /// LTE.
   fourG,
 
   /// 5G NR, standalone or non-standalone.
@@ -23,49 +23,81 @@ enum NetworkGeneration {
 ///
 /// Values are the union of what Android's `TelephonyManager.NETWORK_TYPE_*`
 /// and iOS's `CTRadioAccessTechnology*` constants can report. A technology one
-/// platform can never report simply never appears in that platform's results.
+/// platform cannot report simply never appears in that platform's results.
 enum RadioAccessTechnology {
   /// Reported, but not a technology this package recognises.
   unknown(NetworkGeneration.unknown),
-  gprs(NetworkGeneration.twoG),
-  edge(NetworkGeneration.twoG),
-  gsm(NetworkGeneration.twoG),
-  oneXrtt(NetworkGeneration.twoG),
-  cdma(NetworkGeneration.twoG),
-  iden(NetworkGeneration.twoG),
-  umts(NetworkGeneration.threeG),
-  hsdpa(NetworkGeneration.threeG),
-  hsupa(NetworkGeneration.threeG),
-  hspa(NetworkGeneration.threeG),
-  hspap(NetworkGeneration.threeG),
-  evdo0(NetworkGeneration.threeG),
-  evdoA(NetworkGeneration.threeG),
-  evdoB(NetworkGeneration.threeG),
-  ehrpd(NetworkGeneration.threeG),
-  tdScdma(NetworkGeneration.threeG),
-  lte(NetworkGeneration.fourG),
-  lteCa(NetworkGeneration.fourG),
 
-  /// Wi-Fi calling. Carried over the cellular stack but not a cellular radio,
-  /// so it maps to [NetworkGeneration.unknown].
+  /// General Packet Radio Service.
+  gprs(NetworkGeneration.twoG),
+
+  /// Enhanced Data rates for GSM Evolution.
+  edge(NetworkGeneration.twoG),
+
+  /// Global System for Mobile Communications. Android only.
+  gsm(NetworkGeneration.twoG),
+
+  /// CDMA2000 1xRTT.
+  oneXrtt(NetworkGeneration.twoG),
+
+  /// CDMA IS-95. Android only.
+  cdma(NetworkGeneration.twoG),
+
+  /// Integrated Digital Enhanced Network. Android only.
+  iden(NetworkGeneration.twoG),
+
+  /// UMTS, reported as WCDMA on iOS.
+  umts(NetworkGeneration.threeG),
+
+  /// High Speed Downlink Packet Access.
+  hsdpa(NetworkGeneration.threeG),
+
+  /// High Speed Uplink Packet Access.
+  hsupa(NetworkGeneration.threeG),
+
+  /// HSDPA and HSUPA combined. Android only.
+  hspa(NetworkGeneration.threeG),
+
+  /// Evolved HSPA, marketed as HSPA+. Android only.
+  hspap(NetworkGeneration.threeG),
+
+  /// EV-DO Revision 0.
+  evdo0(NetworkGeneration.threeG),
+
+  /// EV-DO Revision A.
+  evdoA(NetworkGeneration.threeG),
+
+  /// EV-DO Revision B.
+  evdoB(NetworkGeneration.threeG),
+
+  /// Evolved High Rate Packet Data.
+  ehrpd(NetworkGeneration.threeG),
+
+  /// TD-SCDMA. Android only.
+  tdScdma(NetworkGeneration.threeG),
+
+  /// Long Term Evolution.
+  lte(NetworkGeneration.fourG),
+
+  /// Wi-Fi calling. Android only.
+  ///
+  /// Carried over the cellular stack but not a cellular radio, so it maps to
+  /// [NetworkGeneration.unknown] rather than to a generation it never had.
   iwlan(NetworkGeneration.unknown),
 
-  /// 5G NR, both standalone and non-standalone (NRNSA on iOS).
-  nr(NetworkGeneration.fiveG);
+  /// 5G New Radio, standalone.
+  nr(NetworkGeneration.fiveG),
+
+  /// 5G New Radio, non-standalone: a 5G radio on a 4G core. iOS only.
+  ///
+  /// Android has no equivalent network type and reports non-standalone 5G as
+  /// [lte], so this value never appears in an Android result.
+  nrNsa(NetworkGeneration.fiveG);
 
   const RadioAccessTechnology(this.generation);
 
   /// The network generation this technology belongs to.
   final NetworkGeneration generation;
-
-  /// Resolves a platform-supplied name, falling back to [unknown].
-  static RadioAccessTechnology fromName(String? name) {
-    if (name == null) return RadioAccessTechnology.unknown;
-    for (final value in RadioAccessTechnology.values) {
-      if (value.name == name) return value;
-    }
-    return RadioAccessTechnology.unknown;
-  }
 }
 
 /// The state of a single SIM slot.
@@ -100,23 +132,13 @@ enum SimState {
   cardIoError,
 
   /// The card is restricted and cannot be used.
-  cardRestricted;
-
-  /// Resolves a platform-supplied name, falling back to [unknown].
-  static SimState fromName(String? name) {
-    if (name == null) return SimState.unknown;
-    for (final value in SimState.values) {
-      if (value.name == name) return value;
-    }
-    return SimState.unknown;
-  }
+  cardRestricted,
 }
 
 /// Whether the app is allowed to use cellular data.
 ///
-/// On iOS this mirrors `CTCellularData.restrictedState`. On Android there is no
-/// per-app equivalent, so it reflects whether mobile data is enabled for the
-/// device, and is [unknown] when `READ_PHONE_STATE` has not been granted.
+/// On iOS this mirrors `CTCellularData.restrictedState`. Android has no per-app
+/// equivalent, so it reflects whether mobile data is enabled for the device.
 enum CellularDataState {
   /// The platform has not resolved a state yet, or could not be asked.
   unknown,
@@ -125,14 +147,5 @@ enum CellularDataState {
   restricted,
 
   /// Cellular data is available to this app.
-  notRestricted;
-
-  /// Resolves a platform-supplied name, falling back to [unknown].
-  static CellularDataState fromName(String? name) {
-    if (name == null) return CellularDataState.unknown;
-    for (final value in CellularDataState.values) {
-      if (value.name == name) return value;
-    }
-    return CellularDataState.unknown;
-  }
+  notRestricted,
 }

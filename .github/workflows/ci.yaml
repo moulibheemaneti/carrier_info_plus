@@ -14,7 +14,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          # Follow the pin in .fvmrc rather than tracking stable: a Flutter
+          # release can change `dart format` output, and that would redden CI
+          # on a commit that changed nothing.
+          flutter-version-file: .fvmrc
           cache: true
 
       - run: flutter pub get
@@ -30,8 +33,15 @@ jobs:
 
       - name: Check pub score
         run: |
-          dart pub global activate pana
-          dart pub global run pana --no-warning --exit-code-threshold 0 .
+          # Pinned deliberately: pana's scoring rules change between its own
+          # releases, so an unpinned activate can turn CI red on a commit that
+          # changed nothing. Bump this when you mean to.
+          dart pub global activate pana 0.23.19
+          # Threshold 5, not 0, for one reason only: CHANGELOG.md cannot
+          # reference the current version until release-please cuts 2.0.0 and
+          # writes that entry, which costs exactly 5 points. Every other
+          # category scores full marks. Restore 0 once 2.0.0 is released.
+          dart pub global run pana --no-warning --exit-code-threshold 5 .
 
   android:
     name: Build example (Android, builtInKotlin=${{ matrix.built-in-kotlin }})
@@ -52,7 +62,7 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: .fvmrc
           cache: true
 
       - name: Generate example platform folders
@@ -77,7 +87,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: .fvmrc
           cache: true
 
       - name: Generate example platform folders

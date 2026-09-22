@@ -11,5 +11,11 @@
 
       To read per-SIM data, declare this in your own app's manifest:
         <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+      Separately, TelephonyManager.isDataEnabled() accepts ACCESS_NETWORK_STATE
+      rather than READ_PHONE_STATE. That one is an install-time permission with
+      no prompt, so an app that wants the cellular-data state but not per-SIM
+      data can declare only:
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     -->
 </manifest>

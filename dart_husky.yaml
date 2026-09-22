@@ -16,5 +16,8 @@ commit-msg:
   commands:
     conventional:
       preset: conventional
+      # `wip` for local work-in-progress commits, `release` for release-please's
+      # own version bumps. Both are also listed in CONTRIBUTING.md and in the
+      # accepted types of .github/workflows/pr_title.yml.
       types:
         append: [wip, release]

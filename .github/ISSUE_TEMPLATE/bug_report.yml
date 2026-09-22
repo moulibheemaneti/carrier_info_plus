@@ -64,8 +64,12 @@ body:
     id: device
     attributes:
       label: Device and OS version
-      description: Real device, please — emulators and simulators report no SIM.
-      placeholder: "Pixel 7 / Android 15"
+      description: >-
+        Say whether this is a physical device or an emulator. The Android
+        emulator has a fake T-Mobile SIM and is fine for most reports, but it
+        never reports dual-SIM, eSIM or roaming, and the iOS Simulator has no
+        cellular hardware at all.
+      placeholder: "Pixel 7 / Android 15 / physical" 
     validations:
       required: true
 

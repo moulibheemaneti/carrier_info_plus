@@ -8,6 +8,10 @@ analyzer:
   errors:
     # A package's public surface is its contract, so an undocumented member is
     # a bug report waiting to happen. Fail the build, not the review.
+    #
+    # This map only raises the severity of a lint that is already enabled -- it
+    # does not enable one -- so the rule is listed under linter.rules below as
+    # well. Without that it sat here doing nothing.
     public_member_api_docs: error
   exclude:
     - build/**
@@ -21,6 +25,7 @@ linter:
     - cancel_subscriptions
     - close_sinks
     - prefer_final_locals
+    - public_member_api_docs
     - prefer_single_quotes
     - require_trailing_commas
     - sort_pub_dependencies

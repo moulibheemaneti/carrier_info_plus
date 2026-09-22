@@ -1,16 +1,12 @@
 import 'enums.dart';
-import 'parsing.dart';
 
-/// One cellular subscription: a physical SIM, or an active eSIM profile.
+/// A single SIM, physical or embedded.
 ///
-/// Every identity field is nullable, and on iOS 16+ all of them are null —
-/// Apple removed the API that supplied them. Check
-/// `CarrierInfo.support.carrierIdentityAvailable` before showing these to a
-/// user, so you can render a fallback instead of a row of blanks.
+/// Every identity field is nullable because a platform may decline to answer.
+/// A null is not "this SIM has no carrier" — check
+/// [CarrierInfo.support] to find out which it is.
 final class SimCard {
-  /// Creates a [SimCard]. Normally you receive these from the platform rather
-  /// than constructing them, but the constructor is public so you can build
-  /// fixtures in tests.
+  /// Creates a [SimCard].
   const SimCard({
     this.subscriptionId,
     this.slotIndex,
@@ -22,69 +18,54 @@ final class SimCard {
     this.carrierId,
     this.isEmbedded = false,
     this.isRoaming = false,
+    this.isDefaultData = false,
+    this.isDefaultVoice = false,
     this.state = SimState.unknown,
   });
 
-  /// Decodes a [SimCard] from a platform channel map.
-  factory SimCard.fromMap(Map<String, Object?> map) => SimCard(
-    subscriptionId: asInt(map['subscriptionId']),
-    slotIndex: asInt(map['slotIndex']),
-    carrierName: asString(map['carrierName']),
-    displayName: asString(map['displayName']),
-    mobileCountryCode: asString(map['mobileCountryCode']),
-    mobileNetworkCode: asString(map['mobileNetworkCode']),
-    countryIso: asString(map['countryIso']),
-    carrierId: asInt(map['carrierId']),
-    isEmbedded: asBool(map['isEmbedded']),
-    isRoaming: asBool(map['isRoaming']),
-    state: SimState.fromName(asString(map['simState'])),
-  );
-
-  /// Android subscription id, stable while the SIM stays in the device.
+  /// Android's stable identifier for this subscription.
   ///
-  /// Always null on iOS.
+  /// Null on iOS, and null on Android without `READ_PHONE_STATE`.
   final int? subscriptionId;
 
-  /// Zero-based slot the SIM occupies. Always null on iOS.
+  /// The slot this SIM occupies, zero-based.
   final int? slotIndex;
 
-  /// Carrier name as reported by the SIM, for example `Airtel`.
-  ///
-  /// Null on iOS 16+.
+  /// The carrier's name as the SIM reports it.
   final String? carrierName;
 
-  /// User-editable label for the subscription, set in Android settings.
-  ///
-  /// Falls back to the carrier name when the user has not renamed it, and is
-  /// always null on iOS.
+  /// The user-visible label for this subscription, if the user renamed it.
   final String? displayName;
 
-  /// Mobile Country Code, three digits. For example `404` for India.
+  /// Mobile country code, three digits.
   final String? mobileCountryCode;
 
-  /// Mobile Network Code, two or three digits.
+  /// Mobile network code, two or three digits.
   final String? mobileNetworkCode;
 
-  /// ISO 3166-1 alpha-2 country code for the subscription, lowercase.
+  /// ISO 3166-1 alpha-2 country code, lowercase.
   final String? countryIso;
 
-  /// Android's canonical carrier id, stable across MVNOs sharing a network.
-  ///
-  /// Null below Android 10 and on iOS.
+  /// Android's carrier id, stable across rebrands. Null on iOS.
   final int? carrierId;
 
-  /// Whether this is an eSIM profile rather than a physical card.
-  ///
-  /// Android only. iOS cannot attribute an eSIM to a specific service, so this
-  /// is always false there — use `TelephonyCapabilities.supportsEmbeddedSim`
-  /// for the device-level answer instead.
+  /// Whether this is an eSIM rather than a physical card.
   final bool isEmbedded;
 
-  /// Whether the subscription is currently roaming.
+  /// Whether this subscription is currently roaming.
   final bool isRoaming;
 
-  /// State of the slot. Identity fields are only meaningful when this is
-  /// [SimState.ready].
+  /// Whether mobile data runs over this subscription.
+  ///
+  /// On a dual-SIM device this is frequently not the same SIM as
+  /// [isDefaultVoice], which is why [CarrierInfo.primarySim] uses this rather
+  /// than simply taking the first entry.
+  final bool isDefaultData;
+
+  /// Whether calls are placed over this subscription.
+  final bool isDefaultVoice;
+
+  /// The slot's current state.
   final SimState state;
 
   /// The PLMN identifier — [mobileCountryCode] followed by
@@ -106,8 +87,8 @@ final class SimCard {
 
   @override
   String toString() =>
-      'SimCard(slot: $slotIndex, carrier: $carrierName, '
-      'plmn: $plmn, embedded: $isEmbedded, state: ${state.name})';
+      'SimCard(slot: $slotIndex, carrier: $carrierName, plmn: $plmn, '
+      'embedded: $isEmbedded, state: ${state.name})';
 
   @override
   bool operator ==(Object other) =>
@@ -123,6 +104,8 @@ final class SimCard {
           other.carrierId == carrierId &&
           other.isEmbedded == isEmbedded &&
           other.isRoaming == isRoaming &&
+          other.isDefaultData == isDefaultData &&
+          other.isDefaultVoice == isDefaultVoice &&
           other.state == state;
 
   @override
@@ -137,6 +120,8 @@ final class SimCard {
     carrierId,
     isEmbedded,
     isRoaming,
+    isDefaultData,
+    isDefaultVoice,
     state,
   );
 }

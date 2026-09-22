@@ -6,174 +6,182 @@ import UIKit
 /// Reads what CoreTelephony still exposes on modern iOS.
 ///
 /// Apple deprecated `CTCarrier` in iOS 16: carrier name, MCC, MNC and ISO
-/// country now return placeholders or nil for every app. This plugin does not
-/// ship a deprecated fallback for iOS 13-15 — it reports carrier identity as
-/// unavailable on all iOS versions, so behaviour does not silently change
-/// under users as they update, and the package stays free of deprecated API
-/// warnings that would eventually break the build.
+/// country now return placeholders or nil for every app, however well written.
+/// This plugin ships no deprecated fallback for older iOS — it reports carrier
+/// identity as unavailable on every iOS version, so behaviour does not silently
+/// change under users as they update, and the package stays free of deprecated
+/// API warnings that would eventually break the build.
 ///
-/// What remains genuinely readable: radio access technology per active
-/// service, eSIM provisioning support, SMS capability and whether this app may
-/// use cellular data.
-public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin {
+/// What remains genuinely readable: the radio access technology of each active
+/// service, how many services there are, eSIM provisioning support, SMS
+/// capability, and whether this app may use cellular data.
+///
+/// ## Threading
+///
+/// `getCarrierInfo` is bound to a background task queue, so everything it
+/// touches must be safe off the main thread. CoreTelephony is; UIKit is not,
+/// which is why SMS capability is sampled once during registration rather than
+/// read on demand.
+public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
 
   private let networkInfo = CTTelephonyNetworkInfo()
   private let cellularData = CTCellularData()
   private let planProvisioning = CTCellularPlanProvisioning()
 
+  /// Sampled on the main thread at registration.
+  ///
+  /// `MFMessageComposeViewController` is a UIViewController subclass, and
+  /// `getCarrierInfo` runs on a background queue, so reading it there would be
+  /// a main-thread violation. The answer is a device capability and does not
+  /// change while the app runs, so sampling it once is not a compromise.
+  private let smsCapable: Bool
+
+  // Internal rather than private: narrowing the access level of an override
+  // of NSObject.init() is the kind of thing that differs between Swift
+  // versions, and internal already stops anything outside this module
+  // constructing the plugin.
+  override init() {
+    smsCapable = MFMessageComposeViewController.canSendText()
+    super.init()
+  }
+
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(
-      name: "carrier_info_plus",
-      binaryMessenger: registrar.messenger()
-    )
-    registrar.addMethodCallDelegate(CarrierInfoPlusPlugin(), channel: channel)
+    let instance = CarrierInfoPlusPlugin()
+    CarrierInfoApiSetup.setUp(binaryMessenger: registrar.messenger(), api: instance)
+    registrar.publish(instance)
   }
 
-  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    switch call.method {
-    case "getCarrierInfo":
-      result(collect())
-    case "hasPermission", "requestPermission":
-      // iOS requires no permission for anything this plugin still reads.
-      result(true)
-    default:
-      result(FlutterMethodNotImplemented)
-    }
+  // MARK: - Permission
+
+  /// iOS requires no permission for anything this plugin still reads.
+  func hasPermission() throws -> Bool {
+    return true
   }
 
-  // MARK: - Collection
+  /// Nothing to ask for, so this succeeds without prompting.
+  func requestPermission() async throws -> Bool {
+    return true
+  }
 
-  private func collect() -> [String: Any] {
-    let radios = radioTechnologies()
+  // MARK: - Reading
+
+  func getCarrierInfo() throws -> PlatformCarrierInfo {
+    // One entry per active cellular service. The keys identify services, not
+    // SIMs — iOS will not say which SIM is behind one — so the count is all
+    // that can be salvaged from this dictionary beyond the radio itself.
+    let services = networkInfo.serviceCurrentRadioAccessTechnology ?? [:]
+    let radios = services.values.map(Self.mapRadio)
     let supportsESim = planProvisioning.supportsCellularPlan()
+
     // No API reports "does this device have a cellular modem". An active radio
     // or eSIM provisioning support is the closest reliable proxy: a cellular
     // iPhone in airplane mode still reports eSIM support, while a Wi-Fi-only
-    // iPad reports neither.
-    let hasCellularHardware = !radios.isEmpty || supportsESim
+    // iPad and the Simulator report neither.
+    let hasCellularHardware = !services.isEmpty || supportsESim
 
-    // Assembled piece by piece rather than as one literal: Swift's type
-    // checker copes badly with large heterogeneous dictionary literals, and
-    // this keeps each value's type obvious.
-    var payload: [String: Any] = [:]
-    payload["simCards"] = simCards(serviceCount: radios.count)
-    payload["capabilities"] = capabilities(
-      hasCellularHardware: hasCellularHardware,
-      supportsESim: supportsESim,
-      serviceCount: radios.count
+    return PlatformCarrierInfo(
+      // Deliberately empty rather than one all-null entry per service. iOS can
+      // count its services without identifying any of them, and simCount is
+      // the field that says so. Emitting placeholder SIMs would claim more
+      // than the platform told us.
+      simCards: [],
+      simCount: hasCellularHardware ? Int64(services.count) : nil,
+      capabilities: capabilities(
+        hasCellularHardware: hasCellularHardware,
+        supportsESim: supportsESim,
+        serviceCount: services.count
+      ),
+      network: network(radios: radios),
+      support: support(hasCellularHardware: hasCellularHardware)
     )
-    payload["network"] = network(radios: radios)
-    payload["support"] = support(hasCellularHardware: hasCellularHardware)
-    return payload
   }
 
   private func capabilities(
     hasCellularHardware: Bool,
     supportsESim: Bool,
     serviceCount: Int
-  ) -> [String: Bool] {
-    return [
-      "isVoiceCapable": hasCellularHardware,
-      "isSmsCapable": MFMessageComposeViewController.canSendText(),
-      "isDataCapable": hasCellularHardware,
-      // iOS exposes no equivalent of Android's mobile-data switch.
-      "isDataEnabled": false,
-      // iOS exposes no dual-SIM capability query, only what is active now, so
-      // this is a floor rather than the hardware's true capability.
-      "isMultiSimSupported": serviceCount > 1,
-      "supportsEmbeddedSim": supportsESim,
-    ]
+  ) -> PlatformTelephonyCapabilities {
+    return PlatformTelephonyCapabilities(
+      isVoiceCapable: hasCellularHardware,
+      isSmsCapable: smsCapable,
+      isDataCapable: hasCellularHardware,
+      // iOS exposes no equivalent of Android's mobile-data switch. The nearest
+      // signal is per-app rather than device-wide, and it is reported through
+      // network.cellularDataState instead.
+      isDataEnabled: false,
+      // iOS exposes no dual-SIM capability query, only what is active right
+      // now, so this is a floor rather than the hardware's true capability: a
+      // dual-SIM iPhone with one line active reports false.
+      isMultiSimSupported: serviceCount > 1,
+      supportsEmbeddedSim: supportsESim
+    )
   }
 
-  private func network(radios: [String]) -> [String: Any] {
-    var result: [String: Any] = [:]
-    result["radioTechnologies"] = radios
-    // iOS reports no serving-network identity; both are Android-only.
-    result["operatorName"] = NSNull()
-    result["countryIso"] = NSNull()
-    result["cellularDataState"] = cellularDataState()
-    return result
+  private func network(radios: [PlatformRadioAccessTechnology]) -> PlatformNetworkInfo {
+    return PlatformNetworkInfo(
+      radioTechnologies: radios,
+      // iOS reports no serving-network identity. Both are Android-only.
+      operatorName: nil,
+      countryIso: nil,
+      cellularDataState: cellularDataState()
+    )
   }
 
-  private func support(hasCellularHardware: Bool) -> [String: Any] {
-    var result: [String: Any] = [:]
-    result["carrierIdentityAvailable"] = false
-    result["perSimDataAvailable"] = false
-    result["permissionGranted"] = true
-    result["limitation"] =
-      hasCellularHardware ? "platformRemovedApi" : "noTelephonyHardware"
-    return result
-  }
-
-  /// One placeholder entry per active cellular service.
-  ///
-  /// iOS cannot identify the SIM behind a service, so every identity field is
-  /// null. The count is still real, which keeps `simCards.length` and `hasSim`
-  /// meaningful across platforms; `support.carrierIdentityAvailable` is false
-  /// to explain the nulls.
-  private func simCards(serviceCount: Int) -> [[String: Any]] {
-    guard serviceCount > 0 else { return [] }
-    return (0..<serviceCount).map { _ -> [String: Any] in
-      var sim: [String: Any] = [:]
-      for key in [
-        "subscriptionId", "slotIndex", "carrierName", "displayName",
-        "mobileCountryCode", "mobileNetworkCode", "countryIso", "carrierId",
-      ] {
-        sim[key] = NSNull()
-      }
-      sim["isEmbedded"] = false
-      sim["isRoaming"] = false
-      // An attached radio implies a usable SIM behind it.
-      sim["simState"] = "ready"
-      return sim
-    }
-  }
-
-  private func radioTechnologies() -> [String] {
-    guard let current = networkInfo.serviceCurrentRadioAccessTechnology else {
-      return []
-    }
-    return current.values.map { mapRadio($0) }
+  private func support(hasCellularHardware: Bool) -> PlatformSupportInfo {
+    return PlatformSupportInfo(
+      carrierIdentityAvailable: false,
+      // Services can be counted, never identified.
+      perSimDataAvailable: false,
+      // No permission exists to grant.
+      permissionGranted: true,
+      limitation: hasCellularHardware ? .platformRemovedApi : .noTelephonyHardware
+    )
   }
 
   /// Whether this app may use cellular data.
   ///
   /// `restrictedState` is populated asynchronously, so the first call after
   /// launch can legitimately return unknown. Re-read if you need certainty.
-  private func cellularDataState() -> String {
+  private func cellularDataState() -> PlatformCellularDataState {
     switch cellularData.restrictedState {
     case .notRestricted:
-      return "notRestricted"
+      return .notRestricted
     case .restricted:
-      return "restricted"
+      return .restricted
     case .restrictedStateUnknown:
-      return "unknown"
+      return .unknown
     @unknown default:
-      return "unknown"
+      return .unknown
     }
   }
 
   // MARK: - Mapping
 
-  private func mapRadio(_ value: String) -> String {
-    if #available(iOS 14.1, *) {
-      if value == CTRadioAccessTechnologyNR || value == CTRadioAccessTechnologyNRNSA {
-        return "nr"
-      }
-    }
+  /// Maps a `CTRadioAccessTechnology*` constant.
+  ///
+  /// `NRNSA` maps to its own value rather than collapsing into `nr`, because
+  /// non-standalone 5G is a 5G radio on a 4G core and iOS is the only platform
+  /// that names the distinction — Android reports the same situation as LTE.
+  /// Losing it here would throw away the only place it is observable.
+  ///
+  /// The technologies with no constant on this platform — GSM, CDMA, iDEN,
+  /// HSPA, HSPA+, TD-SCDMA and Wi-Fi calling — simply never appear.
+  private static func mapRadio(_ value: String) -> PlatformRadioAccessTechnology {
     switch value {
-    case CTRadioAccessTechnologyGPRS: return "gprs"
-    case CTRadioAccessTechnologyEdge: return "edge"
-    case CTRadioAccessTechnologyWCDMA: return "umts"
-    case CTRadioAccessTechnologyHSDPA: return "hsdpa"
-    case CTRadioAccessTechnologyHSUPA: return "hsupa"
-    case CTRadioAccessTechnologyCDMA1x: return "oneXrtt"
-    case CTRadioAccessTechnologyCDMAEVDORev0: return "evdo0"
-    case CTRadioAccessTechnologyCDMAEVDORevA: return "evdoA"
-    case CTRadioAccessTechnologyCDMAEVDORevB: return "evdoB"
-    case CTRadioAccessTechnologyeHRPD: return "ehrpd"
-    case CTRadioAccessTechnologyLTE: return "lte"
-    default: return "unknown"
+    case CTRadioAccessTechnologyGPRS: return .gprs
+    case CTRadioAccessTechnologyEdge: return .edge
+    case CTRadioAccessTechnologyWCDMA: return .umts
+    case CTRadioAccessTechnologyHSDPA: return .hsdpa
+    case CTRadioAccessTechnologyHSUPA: return .hsupa
+    case CTRadioAccessTechnologyCDMA1x: return .oneXrtt
+    case CTRadioAccessTechnologyCDMAEVDORev0: return .evdo0
+    case CTRadioAccessTechnologyCDMAEVDORevA: return .evdoA
+    case CTRadioAccessTechnologyCDMAEVDORevB: return .evdoB
+    case CTRadioAccessTechnologyeHRPD: return .ehrpd
+    case CTRadioAccessTechnologyLTE: return .lte
+    case CTRadioAccessTechnologyNR: return .nr
+    case CTRadioAccessTechnologyNRNSA: return .nrNsa
+    default: return .unknown
     }
   }
 }
