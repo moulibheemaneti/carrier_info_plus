@@ -170,6 +170,13 @@ class CarrierInfoPlusPlugin :
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
         val granted = hasPermission()
 
+        // Read once per snapshot and share. capabilities.isDataEnabled and
+        // network.cellularDataState both derive from this, and reading it twice
+        // lets a user toggling mobile data mid-call produce a CarrierInfo that
+        // contradicts itself. Null means it could not be read at all, which is
+        // not the same as "off".
+        val dataEnabled = readDataEnabled(telephony)
+
         val limitation = when {
             // Ordered most fundamental first: there is no point telling an app to
             // prompt for a permission on a device with no radio to read.
@@ -180,8 +187,8 @@ class CarrierInfoPlusPlugin :
 
         return PlatformCarrierInfo(
             simCards = readSimCards(telephony, subscriptions, hasTelephony, granted),
-            capabilities = readCapabilities(context, telephony, hasTelephony),
-            network = readNetwork(telephony, granted),
+            capabilities = readCapabilities(context, telephony, hasTelephony, dataEnabled),
+            network = readNetwork(telephony, granted, dataEnabled),
             support = PlatformSupportInfo(
                 carrierIdentityAvailable = hasTelephony,
                 perSimDataAvailable = hasTelephony && granted,
@@ -318,10 +325,24 @@ class CarrierInfoPlusPlugin :
         )
     }
 
+    /**
+     * Whether mobile data is switched on, or null when it could not be read.
+     *
+     * API 26. Note it does *not* want `READ_PHONE_STATE`: the documented set is
+     * `ACCESS_NETWORK_STATE`, `MODIFY_PHONE_STATE` or `READ_BASIC_PHONE_STATE`.
+     * So it is attempted regardless of our own permission state, and simply
+     * fails closed if the app declared none of them.
+     */
+    private fun readDataEnabled(telephony: TelephonyManager?): Boolean? {
+        if (telephony == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        return runCatching { telephony.isDataEnabled }.getOrNull()
+    }
+
     private fun readCapabilities(
         context: Context,
         telephony: TelephonyManager?,
         hasTelephony: Boolean,
+        dataEnabled: Boolean?,
     ): PlatformTelephonyCapabilities {
         if (telephony == null || !hasTelephony) {
             return PlatformTelephonyCapabilities(
@@ -343,17 +364,6 @@ class CarrierInfoPlusPlugin :
                 .getOrDefault(false)
         }
 
-        // isDataEnabled is API 26. Note it does *not* want READ_PHONE_STATE: the
-        // documented set is ACCESS_NETWORK_STATE, MODIFY_PHONE_STATE or
-        // READ_BASIC_PHONE_STATE. So it is attempted regardless of our own
-        // permission state, and simply fails closed if the app declared none of
-        // them.
-        val isDataEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            runCatching { telephony.isDataEnabled }.getOrDefault(false)
-        } else {
-            false
-        }
-
         // isMultiSimSupported is API 29, and does want READ_PHONE_STATE.
         val isMultiSimSupported = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             runCatching {
@@ -373,7 +383,7 @@ class CarrierInfoPlusPlugin :
             isVoiceCapable = runCatching { telephony.isVoiceCapable }.getOrDefault(false),
             isSmsCapable = runCatching { telephony.isSmsCapable }.getOrDefault(false),
             isDataCapable = isDataCapable,
-            isDataEnabled = isDataEnabled,
+            isDataEnabled = dataEnabled ?: false,
             isMultiSimSupported = isMultiSimSupported,
             supportsEmbeddedSim = supportsEmbeddedSim,
         )
@@ -382,6 +392,7 @@ class CarrierInfoPlusPlugin :
     private fun readNetwork(
         telephony: TelephonyManager?,
         granted: Boolean,
+        dataEnabled: Boolean?,
     ): PlatformNetworkInfo {
         val radios = mutableListOf<PlatformRadioAccessTechnology>()
         // getDataNetworkType is API 24 but requires READ_PHONE_STATE (or
@@ -396,13 +407,6 @@ class CarrierInfoPlusPlugin :
         // Android has no per-app cellular restriction to mirror iOS's
         // CTCellularData, so the device-wide data switch is the closest
         // equivalent. Unknown when we could not read it at all.
-        val dataEnabled = if (telephony != null &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-        ) {
-            runCatching { telephony.isDataEnabled }.getOrNull()
-        } else {
-            null
-        }
         val dataState = when (dataEnabled) {
             null -> PlatformCellularDataState.UNKNOWN
             true -> PlatformCellularDataState.NOT_RESTRICTED
