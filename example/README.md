@@ -1,20 +1,17 @@
-# carrier_info_plus example
+# carrier_info_plus_example
 
-The platform folders are not checked in. Generate them once, then run:
+Demonstrates how to use the carrier_info_plus plugin.
 
-```sh
-cd example
-flutter create --platforms=android,ios .
-flutter run
-```
+## Getting Started
 
-To see per-SIM data on Android, add `READ_PHONE_STATE` to
-`example/android/app/src/main/AndroidManifest.xml` and grant it with the button
-in the app:
+This project is a starting point for a Flutter application.
 
-```xml
-<uses-permission android:name="android.permission.READ_PHONE_STATE" />
-```
+A few resources to get you started if this is your first Flutter project:
 
-Without it the app still runs and shows the permission-free subset — which is
-the point worth seeing.
+- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
+- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
