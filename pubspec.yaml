@@ -1,7 +1,15 @@
 name: carrier_info_plus
 description: "A new Flutter plugin project."
 version: 0.0.1
-homepage:
+homepage: https://pub.dev/packages/carrier_info_plus
+repository: https://github.com/moulibheemaneti/carrier_info_plus
+issue_tracker: https://github.com/moulibheemaneti/carrier_info_plus/issues
+topics:
+  - carrier
+  - sim
+  - telephony
+  - cellular
+  - network
 
 environment:
   sdk: ^3.13.4
