@@ -21,13 +21,13 @@ final class CarrierInfo {
 
   /// Decodes from a platform channel map.
   factory CarrierInfo.fromMap(Map<String, Object?> map) => CarrierInfo(
-        simCards: <SimCard>[
-          for (final sim in asMapList(map['simCards'])) SimCard.fromMap(sim),
-        ],
-        capabilities: TelephonyCapabilities.fromMap(asMap(map['capabilities'])),
-        network: NetworkInfo.fromMap(asMap(map['network'])),
-        support: PlatformSupport.fromMap(asMap(map['support'])),
-      );
+    simCards: <SimCard>[
+      for (final sim in asMapList(map['simCards'])) SimCard.fromMap(sim),
+    ],
+    capabilities: TelephonyCapabilities.fromMap(asMap(map['capabilities'])),
+    network: NetworkInfo.fromMap(asMap(map['network'])),
+    support: PlatformSupport.fromMap(asMap(map['support'])),
+  );
 
   /// Every active subscription, in slot order.
   ///
@@ -62,7 +62,8 @@ final class CarrierInfo {
   NetworkGeneration get generation => network.generation;
 
   @override
-  String toString() => 'CarrierInfo(sims: ${simCards.length}, '
+  String toString() =>
+      'CarrierInfo(sims: ${simCards.length}, '
       'generation: ${generation.name}, support: $support)';
 
   @override

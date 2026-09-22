@@ -233,10 +233,9 @@ void main() {
       final CarrierInfo info = await CarrierInfoPlus.get();
 
       expect(info.primarySim?.state, SimState.unknown);
-      expect(
-        info.network.radioTechnologies,
-        <RadioAccessTechnology>[RadioAccessTechnology.unknown],
-      );
+      expect(info.network.radioTechnologies, <RadioAccessTechnology>[
+        RadioAccessTechnology.unknown,
+      ]);
     });
 
     test('empty strings from the platform read as null', () async {

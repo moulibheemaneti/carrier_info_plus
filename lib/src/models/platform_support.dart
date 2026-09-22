@@ -39,16 +39,16 @@ enum DataLimitation {
   ///
   /// Not localised — do not put this in front of end users.
   String get explanation => switch (this) {
-        DataLimitation.none => 'All available data was reported.',
-        DataLimitation.permissionNotGranted =>
-          'READ_PHONE_STATE has not been granted, so per-SIM data is '
-              'unavailable.',
-        DataLimitation.platformRemovedApi =>
-          'Apple removed CTCarrier in iOS 16, so carrier identity is no longer '
-              'available to any app.',
-        DataLimitation.noTelephonyHardware =>
-          'This device has no cellular hardware.',
-      };
+    DataLimitation.none => 'All available data was reported.',
+    DataLimitation.permissionNotGranted =>
+      'READ_PHONE_STATE has not been granted, so per-SIM data is '
+          'unavailable.',
+    DataLimitation.platformRemovedApi =>
+      'Apple removed CTCarrier in iOS 16, so carrier identity is no longer '
+          'available to any app.',
+    DataLimitation.noTelephonyHardware =>
+      'This device has no cellular hardware.',
+  };
 }
 
 /// What the current platform was actually able to answer.
@@ -67,11 +67,11 @@ final class PlatformSupport {
 
   /// Decodes from a platform channel map.
   factory PlatformSupport.fromMap(Map<String, Object?> map) => PlatformSupport(
-        carrierIdentityAvailable: asBool(map['carrierIdentityAvailable']),
-        perSimDataAvailable: asBool(map['perSimDataAvailable']),
-        permissionGranted: asBool(map['permissionGranted']),
-        limitation: DataLimitation.fromName(asString(map['limitation'])),
-      );
+    carrierIdentityAvailable: asBool(map['carrierIdentityAvailable']),
+    perSimDataAvailable: asBool(map['perSimDataAvailable']),
+    permissionGranted: asBool(map['permissionGranted']),
+    limitation: DataLimitation.fromName(asString(map['limitation'])),
+  );
 
   /// Whether carrier name, MCC, MNC and country could be read.
   ///
@@ -96,7 +96,8 @@ final class PlatformSupport {
   bool get isComplete => limitation == DataLimitation.none;
 
   @override
-  String toString() => 'PlatformSupport(identity: $carrierIdentityAvailable, '
+  String toString() =>
+      'PlatformSupport(identity: $carrierIdentityAvailable, '
       'perSim: $perSimDataAvailable, permission: $permissionGranted, '
       'limitation: ${limitation.name})';
 
@@ -111,9 +112,9 @@ final class PlatformSupport {
 
   @override
   int get hashCode => Object.hash(
-        carrierIdentityAvailable,
-        perSimDataAvailable,
-        permissionGranted,
-        limitation,
-      );
+    carrierIdentityAvailable,
+    perSimDataAvailable,
+    permissionGranted,
+    limitation,
+  );
 }

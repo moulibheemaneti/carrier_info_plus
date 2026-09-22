@@ -27,18 +27,18 @@ final class SimCard {
 
   /// Decodes a [SimCard] from a platform channel map.
   factory SimCard.fromMap(Map<String, Object?> map) => SimCard(
-        subscriptionId: asInt(map['subscriptionId']),
-        slotIndex: asInt(map['slotIndex']),
-        carrierName: asString(map['carrierName']),
-        displayName: asString(map['displayName']),
-        mobileCountryCode: asString(map['mobileCountryCode']),
-        mobileNetworkCode: asString(map['mobileNetworkCode']),
-        countryIso: asString(map['countryIso']),
-        carrierId: asInt(map['carrierId']),
-        isEmbedded: asBool(map['isEmbedded']),
-        isRoaming: asBool(map['isRoaming']),
-        state: SimState.fromName(asString(map['simState'])),
-      );
+    subscriptionId: asInt(map['subscriptionId']),
+    slotIndex: asInt(map['slotIndex']),
+    carrierName: asString(map['carrierName']),
+    displayName: asString(map['displayName']),
+    mobileCountryCode: asString(map['mobileCountryCode']),
+    mobileNetworkCode: asString(map['mobileNetworkCode']),
+    countryIso: asString(map['countryIso']),
+    carrierId: asInt(map['carrierId']),
+    isEmbedded: asBool(map['isEmbedded']),
+    isRoaming: asBool(map['isRoaming']),
+    state: SimState.fromName(asString(map['simState'])),
+  );
 
   /// Android subscription id, stable while the SIM stays in the device.
   ///
@@ -105,7 +105,8 @@ final class SimCard {
       carrierName != null || mobileCountryCode != null || countryIso != null;
 
   @override
-  String toString() => 'SimCard(slot: $slotIndex, carrier: $carrierName, '
+  String toString() =>
+      'SimCard(slot: $slotIndex, carrier: $carrierName, '
       'plmn: $plmn, embedded: $isEmbedded, state: ${state.name})';
 
   @override
@@ -126,16 +127,16 @@ final class SimCard {
 
   @override
   int get hashCode => Object.hash(
-        subscriptionId,
-        slotIndex,
-        carrierName,
-        displayName,
-        mobileCountryCode,
-        mobileNetworkCode,
-        countryIso,
-        carrierId,
-        isEmbedded,
-        isRoaming,
-        state,
-      );
+    subscriptionId,
+    slotIndex,
+    carrierName,
+    displayName,
+    mobileCountryCode,
+    mobileNetworkCode,
+    countryIso,
+    carrierId,
+    isEmbedded,
+    isRoaming,
+    state,
+  );
 }

@@ -7,8 +7,9 @@
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-ready-0175C2?style=flat-square&labelColor=1a1a2e)](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers)
 
 A maintained replacement for the unmaintained [`carrier_info`](https://pub.dev/packages/carrier_info),
-built for Flutter 3.24+ with Swift Package Manager support, AGP 9-ready Gradle
-config, and typed enums instead of stringly-typed fields.
+built for Flutter 3.47.5+ with Swift Package Manager support, AGP 9-ready Gradle
+config on Flutter's built-in Kotlin, and typed enums instead of stringly-typed
+fields.
 
 > [!IMPORTANT]
 > **This is not a drop-in replacement.** The `_plus` suffix usually signals a
@@ -77,6 +78,17 @@ dependencies:
 
 **No iOS setup required.** SwiftPM and CocoaPods are both supported, so it
 works whether or not your app has migrated.
+
+**No Android Gradle setup required either.** This package does not apply the
+Kotlin Gradle plugin, so it builds whichever way your app is configured:
+
+| Your app's `android.builtInKotlin` | Who compiles this package's Kotlin |
+| --- | --- |
+| `true` | AGP 9, directly |
+| `false` (what `flutter create` writes today) | Flutter, by applying KGP for us |
+
+Flutter warns about packages that apply KGP themselves and will eventually
+refuse to build them. This one is not on that list.
 
 ### Android permissions
 
