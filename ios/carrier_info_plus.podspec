@@ -32,7 +32,9 @@ Pod::Spec.new do |s|
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Mouli Bheemaneti' => 'moulibheemaneti99@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'carrier_info_plus/Sources/carrier_info_plus/**/*'
+  # Restricted to Swift rather than '**/*': the privacy manifest lives in the
+  # same directory and belongs in resource_bundles below, not here.
+  s.source_files = 'carrier_info_plus/Sources/carrier_info_plus/**/*.swift'
   s.dependency 'Flutter'
   s.platform = :ios, '15.0'
   # Mirrors the linkerSettings in Package.swift, so a CocoaPods consumer
@@ -43,9 +45,9 @@ Pod::Spec.new do |s|
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
   s.swift_version = '5.0'
 
-  # If your plugin requires a privacy manifest, for example if it uses any
-  # required reason APIs, update the PrivacyInfo.xcprivacy file to describe your
-  # plugin's privacy impact, and then uncomment this line. For more information,
-  # see https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-  # s.resource_bundles = {'carrier_info_plus_privacy' => ['carrier_info_plus/Sources/carrier_info_plus/PrivacyInfo.xcprivacy']}
+  # The CocoaPods equivalent of Package.swift's .process("PrivacyInfo.xcprivacy"),
+  # so a pod consumer ships the same manifest a SwiftPM one does.
+  s.resource_bundles = {
+    'carrier_info_plus_privacy' => ['carrier_info_plus/Sources/carrier_info_plus/PrivacyInfo.xcprivacy']
+  }
 end
