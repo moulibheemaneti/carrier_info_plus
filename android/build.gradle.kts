@@ -72,6 +72,12 @@ kotlin {
 }
 
 dependencies {
+    // Required by pigeon's generated code, which imports kotlinx.coroutines for
+    // the @async method: CoroutineScope, Dispatchers.Main, launch and
+    // suspendCancellableCoroutine. The -android artifact rather than -core,
+    // because Dispatchers.Main needs a main-thread dispatcher to exist.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
 }
