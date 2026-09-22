@@ -29,7 +29,8 @@ Closes #
 
 - [ ] `fvm flutter analyze .` passes
 - [ ] `fvm flutter test` passes
-- [ ] Manually verified in `example/` on a real device (emulators report no SIM)
+- [ ] Manually verified in `example/` — the Android emulator covers the single-SIM
+      path; dual-SIM, eSIM, roaming and anything on iOS need a real device
 
 Device(s) tested on:
 

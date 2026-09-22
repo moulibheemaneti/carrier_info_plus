@@ -573,8 +573,8 @@ struct PlatformSupportInfo: Hashable, CustomStringConvertible {
   /// to prompt or to hide the UI.
   ///
   /// Deliberately a single value rather than a set. More than one limitation
-  /// can technically apply at once -- a simulator has no telephony hardware
-  /// and no granted permission -- but only the most fundamental one is
+  /// can technically apply at once -- the iOS Simulator has no telephony
+  /// hardware and no granted permission -- but only the most fundamental one is
   /// reported, because it is the one that decides what an app should do. There
   /// is no point prompting for a permission on a device with no radio.
   var limitation: PlatformDataLimitation

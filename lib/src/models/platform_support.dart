@@ -15,7 +15,9 @@ enum DataLimitation {
   /// are gone for good. Not recoverable by any app.
   platformRemovedApi,
 
-  /// The device has no cellular hardware — a Wi-Fi-only tablet or a simulator.
+  /// The device has no cellular hardware — a Wi-Fi-only tablet, or the iOS
+  /// Simulator. Note the Android emulator does *not* land here: it reports a
+  /// fake T-Mobile SIM.
   noTelephonyHardware;
 
   /// Whether the app can do something about this limitation.

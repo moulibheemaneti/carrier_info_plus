@@ -26,9 +26,18 @@ fvm flutter pub get
 # Run tests
 fvm flutter test
 
-# Run the example app (needs a real device — emulators have no SIM)
+# Run the example app
 cd example && fvm flutter run
 ```
+
+The Android emulator ships a fake T-Mobile SIM (MCC 310, MNC 260) and reports a
+carrier, country, SIM state and radio technology, so most development needs no
+hardware at all. What it does not emulate is dual-SIM, eSIM or roaming, and it
+reports `isMultiSimSupported` and `supportsEmbeddedSim` as false regardless of
+what the host machine can do.
+
+The iOS Simulator is the opposite case: it has no cellular hardware, so every
+cellular field is empty there. iOS behaviour has to be checked on a device.
 
 If you don't use FVM, plain `flutter` works too — just make sure your version satisfies the SDK constraint in `pubspec.yaml`.
 
@@ -116,7 +125,8 @@ Before opening a PR, make sure:
 - [ ] `fvm flutter test` passes locally
 - [ ] New public APIs have dartdoc comments
 - [ ] New behavior has a test in `test/`
-- [ ] Platform-specific behavior is verified on a real device (emulators report no SIM)
+- [ ] Platform-specific behavior is verified — the Android emulator covers the
+      single-SIM path; dual-SIM, eSIM, roaming and anything on iOS need hardware
 - [ ] PR title follows Conventional Commits
 
 You do **not** need to bump `pubspec.yaml` or edit `CHANGELOG.md` — release-please does both.
