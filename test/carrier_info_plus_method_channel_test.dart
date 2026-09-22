@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelCarrierInfoPlus platform = MethodChannelCarrierInfoPlus();
+  final MethodChannelCarrierInfoPlus platform = MethodChannelCarrierInfoPlus();
   const MethodChannel channel = MethodChannel('carrier_info_plus');
 
   setUp(() {

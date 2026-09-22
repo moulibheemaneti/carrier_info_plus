@@ -20,8 +20,9 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    CarrierInfoPlus carrierInfoPlusPlugin = CarrierInfoPlus();
-    MockCarrierInfoPlusPlatform fakePlatform = MockCarrierInfoPlusPlatform();
+    final CarrierInfoPlus carrierInfoPlusPlugin = CarrierInfoPlus();
+    final MockCarrierInfoPlusPlatform fakePlatform =
+        MockCarrierInfoPlusPlatform();
     CarrierInfoPlusPlatform.instance = fakePlatform;
 
     expect(await carrierInfoPlusPlugin.getPlatformVersion(), '42');
