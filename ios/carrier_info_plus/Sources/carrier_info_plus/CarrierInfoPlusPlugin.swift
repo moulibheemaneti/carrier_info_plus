@@ -36,7 +36,11 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
   /// change while the app runs, so sampling it once is not a compromise.
   private let smsCapable: Bool
 
-  private override init() {
+  // Internal rather than private: narrowing the access level of an override
+  // of NSObject.init() is the kind of thing that differs between Swift
+  // versions, and internal already stops anything outside this module
+  // constructing the plugin.
+  override init() {
     smsCapable = MFMessageComposeViewController.canSendText()
     super.init()
   }
