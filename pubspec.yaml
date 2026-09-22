@@ -20,6 +20,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Imported by the pigeon-generated lib/src/messages.g.dart, so it has to be
+  # a direct dependency even though no hand-written file uses it. Matches the
+  # constraint the Flutter SDK declares for meta.
+  meta: ^1.18.3
 
 dev_dependencies:
   dart_husky: ^1.9.3
