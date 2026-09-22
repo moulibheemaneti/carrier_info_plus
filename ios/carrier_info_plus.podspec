@@ -35,6 +35,9 @@ Pod::Spec.new do |s|
   s.source_files = 'carrier_info_plus/Sources/carrier_info_plus/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '15.0'
+  # Mirrors the linkerSettings in Package.swift, so a CocoaPods consumer
+  # links the same frameworks a SwiftPM one does.
+  s.frameworks = 'CoreTelephony', 'MessageUI'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }

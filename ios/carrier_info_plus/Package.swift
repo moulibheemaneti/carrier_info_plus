@@ -30,6 +30,15 @@ let package = Package(
                 // If you have other resources that need to be bundled with your plugin, refer to
                 // the following instructions to add them:
                 // https://developer.apple.com/documentation/xcode/bundling-resources-with-a-swift-package
+            ],
+            linkerSettings: [
+                // CoreTelephony for the radio, service and cellular-data reads.
+                // MessageUI for MFMessageComposeViewController.canSendText(),
+                // which is the only way iOS answers "can this device send SMS".
+                // Xcode usually auto-links imported system frameworks, but
+                // SwiftPM is less reliable about it, so both are declared.
+                .linkedFramework("CoreTelephony"),
+                .linkedFramework("MessageUI"),
             ]
         )
     ]
