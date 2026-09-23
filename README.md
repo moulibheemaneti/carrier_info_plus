@@ -37,7 +37,7 @@ maintained the plugin is.
 | Roaming | ✅ | ❌ |
 | Radio technology (LTE / 5G NR) | ✅ | ✅ |
 | Network generation | ✅ | ✅ |
-| eSIM support | ✅ | ✅ |
+| eSIM support | ✅ | ⚠️ carrier apps only |
 | SMS / voice capability | ✅ | ✅ |
 | Cellular data availability | ✅ | ✅ |
 
@@ -85,8 +85,9 @@ This package **declares no permissions of its own**. `READ_PHONE_STATE` is a
 runtime permission that appears in the Play Console and obliges you to file a
 data-safety declaration, so it's your call, not the package's.
 
-Without any permission you still get: network operator, SIM state, and the
-active SIM's MCC/MNC and country. For per-SIM data on a dual-SIM device, add:
+Without any permission you still get: network operator, SIM state, the active
+SIM's MCC/MNC and country, and the device's capabilities. For per-SIM data on a
+dual-SIM device, add:
 
 ```xml
 <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -236,8 +237,13 @@ Apple finally removes it. iOS reports carrier identity as unavailable on every
 version, consistently.
 
 What remains genuinely readable on iOS is real and useful: radio access
-technology per active service, how many services there are, eSIM provisioning
-support, SMS capability, and whether your app may use cellular data.
+technology per active service, how many services there are, whether the device
+has a modem at all, SMS capability, and whether your app may use cellular data.
+
+eSIM support is the exception. The API this package reads it from,
+`CTCellularPlanProvisioning.supportsCellularPlan()`, answers true only to apps
+holding Apple's carrier entitlement, so for everyone else
+`capabilities.supportsEmbeddedSim` is false on iOS whatever the device.
 
 ---
 

@@ -564,7 +564,12 @@ struct PlatformNetworkInfo: Hashable, CustomStringConvertible {
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct PlatformSupportInfo: Hashable, CustomStringConvertible {
-  /// Whether carrier name, MCC, MNC and country could be read at all.
+  /// Whether this platform can read carrier name, MCC, MNC and country.
+  ///
+  /// A capability, not a promise of data. Android reads identity
+  /// permission-free from whatever SIM is present, so this is true there with
+  /// or without `READ_PHONE_STATE`, and with no SIM in the device at all. Look
+  /// at the SIMs themselves to find out whether any identity was found.
   var carrierIdentityAvailable: Bool
   /// Whether every SIM could be enumerated, rather than just the active one.
   var perSimDataAvailable: Bool
@@ -639,6 +644,10 @@ struct PlatformCarrierInfo: Hashable, CustomStringConvertible {
   /// without reporting anything identifying about them, and Android can
   /// enumerate fully but only once the per-SIM permission is granted -- the
   /// count itself needs that permission too, so it is null without it.
+  ///
+  /// On iOS this is null, not zero, when no service is active: a SIM in
+  /// airplane mode or out of coverage has no service either, and iOS gives an
+  /// ordinary app no way to tell that apart from an empty tray.
   ///
   /// Prefer this over `simCards.length` when asking whether a device is
   /// dual-SIM.
