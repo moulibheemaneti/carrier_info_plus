@@ -13,15 +13,20 @@ import UIKit
 /// API warnings that would eventually break the build.
 ///
 /// What remains genuinely readable: the radio access technology of each active
-/// service, how many services there are, eSIM provisioning support, SMS
-/// capability, and whether this app may use cellular data.
+/// service, how many services there are, whether the device has a modem at
+/// all, SMS capability, and whether this app may use cellular data. eSIM
+/// provisioning support is readable too, but only by a carrier's app.
+///
+/// This class only takes readings. What they mean is decided in
+/// `CellularReadings`, which touches no framework and so can be unit tested.
 ///
 /// ## Threading
 ///
 /// `getCarrierInfo` is bound to a background task queue, so everything it
-/// touches must be safe off the main thread. CoreTelephony is; UIKit is not,
-/// which is why SMS capability is sampled once during registration rather than
-/// read on demand.
+/// touches must be safe off the main thread. The CoreTelephony reads it makes
+/// are; UIKit is not, which is why SMS capability is sampled once during
+/// registration rather than read on demand. Subscriber slots are sampled there
+/// too, for a different reason: see `subscriberCount`.
 public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
 
   private let networkInfo = CTTelephonyNetworkInfo()
@@ -36,12 +41,25 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
   /// change while the app runs, so sampling it once is not a compromise.
   private let smsCapable: Bool
 
+  /// How many subscriber slots CoreTelephony reports, sampled at registration.
+  ///
+  /// Only used to decide whether the device has a modem, which cannot change
+  /// while the app runs. Apple documents no threading guarantee for
+  /// `CTSubscriberInfo` either way, so it is read here on the main thread
+  /// rather than trusted on the background queue.
+  private let subscriberCount: Int
+
+  /// Whether this hardware is an iPhone. Fixed for the life of the process.
+  private let isPhone: Bool
+
   // Internal rather than private: narrowing the access level of an override
   // of NSObject.init() is the kind of thing that differs between Swift
   // versions, and internal already stops anything outside this module
   // constructing the plugin.
   override init() {
     smsCapable = MFMessageComposeViewController.canSendText()
+    subscriberCount = CTSubscriberInfo.subscribers().count
+    isPhone = CarrierInfoPlusPlugin.hardwareModel().hasPrefix("iPhone")
     super.init()
   }
 
@@ -66,75 +84,22 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
   // MARK: - Reading
 
   func getCarrierInfo() throws -> PlatformCarrierInfo {
+    return readings().carrierInfo()
+  }
+
+  private func readings() -> CellularReadings {
     // One entry per active cellular service. The keys identify services, not
     // SIMs — iOS will not say which SIM is behind one — so the count is all
     // that can be salvaged from this dictionary beyond the radio itself.
     let services = networkInfo.serviceCurrentRadioAccessTechnology ?? [:]
-    let radios = services.values.map(Self.mapRadio)
-    let supportsESim = planProvisioning.supportsCellularPlan()
 
-    // No API reports "does this device have a cellular modem". An active radio
-    // or eSIM provisioning support is the closest reliable proxy: a cellular
-    // iPhone in airplane mode still reports eSIM support, while a Wi-Fi-only
-    // iPad and the Simulator report neither.
-    let hasCellularHardware = !services.isEmpty || supportsESim
-
-    return PlatformCarrierInfo(
-      // Deliberately empty rather than one all-null entry per service. iOS can
-      // count its services without identifying any of them, and simCount is
-      // the field that says so. Emitting placeholder SIMs would claim more
-      // than the platform told us.
-      simCards: [],
-      simCount: hasCellularHardware ? Int64(services.count) : nil,
-      capabilities: capabilities(
-        hasCellularHardware: hasCellularHardware,
-        supportsESim: supportsESim,
-        serviceCount: services.count
-      ),
-      network: network(radios: radios),
-      support: support(hasCellularHardware: hasCellularHardware)
-    )
-  }
-
-  private func capabilities(
-    hasCellularHardware: Bool,
-    supportsESim: Bool,
-    serviceCount: Int
-  ) -> PlatformTelephonyCapabilities {
-    return PlatformTelephonyCapabilities(
-      isVoiceCapable: hasCellularHardware,
-      isSmsCapable: smsCapable,
-      isDataCapable: hasCellularHardware,
-      // iOS exposes no equivalent of Android's mobile-data switch. The nearest
-      // signal is per-app rather than device-wide, and it is reported through
-      // network.cellularDataState instead.
-      isDataEnabled: false,
-      // iOS exposes no dual-SIM capability query, only what is active right
-      // now, so this is a floor rather than the hardware's true capability: a
-      // dual-SIM iPhone with one line active reports false.
-      isMultiSimSupported: serviceCount > 1,
-      supportsEmbeddedSim: supportsESim
-    )
-  }
-
-  private func network(radios: [PlatformRadioAccessTechnology]) -> PlatformNetworkInfo {
-    return PlatformNetworkInfo(
-      radioTechnologies: radios,
-      // iOS reports no serving-network identity. Both are Android-only.
-      operatorName: nil,
-      countryIso: nil,
+    return CellularReadings(
+      serviceRadios: services.values.map(Self.mapRadio),
+      supportsCellularPlan: planProvisioning.supportsCellularPlan(),
+      subscriberCount: subscriberCount,
+      isPhone: isPhone,
+      smsCapable: smsCapable,
       cellularDataState: cellularDataState()
-    )
-  }
-
-  private func support(hasCellularHardware: Bool) -> PlatformSupportInfo {
-    return PlatformSupportInfo(
-      carrierIdentityAvailable: false,
-      // Services can be counted, never identified.
-      perSimDataAvailable: false,
-      // No permission exists to grant.
-      permissionGranted: true,
-      limitation: hasCellularHardware ? .platformRemovedApi : .noTelephonyHardware
     )
   }
 
@@ -182,6 +147,20 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
     case CTRadioAccessTechnologyNR: return .nr
     case CTRadioAccessTechnologyNRNSA: return .nrNsa
     default: return .unknown
+    }
+  }
+
+  /// The hardware model identifier, such as "iPhone15,2" or "iPad13,1".
+  ///
+  /// Read from the kernel rather than from `UIDevice`, whose interface idiom
+  /// reports a phone when an iPhone-only app runs on an iPad. On the Simulator
+  /// this is the host's architecture instead, which is the right answer here:
+  /// the Simulator has no modem either.
+  private static func hardwareModel() -> String {
+    var info = utsname()
+    uname(&info)
+    return withUnsafeBytes(of: &info.machine) { bytes in
+      String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
     }
   }
 }

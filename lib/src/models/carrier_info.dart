@@ -38,6 +38,10 @@ final class CarrierInfo {
   /// How many SIMs the platform says are present, or null when it will not say.
   ///
   /// Prefer this over `simCards.length` when asking how many SIMs a device has.
+  ///
+  /// Null on Android without `READ_PHONE_STATE`. On iOS this counts active
+  /// cellular services, and is null when there are none: no service does not
+  /// mean no SIM, and iOS will not say which it is.
   final int? simCount;
 
   /// The SIM mobile data runs over, or the first one if the platform cannot

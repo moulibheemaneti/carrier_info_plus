@@ -55,7 +55,12 @@ final class PlatformSupport {
     this.limitation = DataLimitation.none,
   });
 
-  /// Whether carrier name, MCC, MNC and country could be read.
+  /// Whether this platform can read carrier name, MCC, MNC and country.
+  ///
+  /// A capability, not a promise of data. Android reads identity without any
+  /// permission from whatever SIM is present, so this is true there with or
+  /// without `READ_PHONE_STATE`, and on a device with no SIM in it at all.
+  /// Check `SimCard.hasIdentity` for whether any identity was actually found.
   ///
   /// Always false on iOS 16 and later.
   final bool carrierIdentityAvailable;

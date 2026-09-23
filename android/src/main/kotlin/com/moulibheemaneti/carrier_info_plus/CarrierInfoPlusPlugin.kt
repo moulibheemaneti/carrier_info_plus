@@ -36,7 +36,10 @@ private const val PERMISSION_REQUEST_CODE = 0xC1F0
  *  - With it, [SubscriptionManager] enumerates every subscription.
  *
  * The permission-free tier deliberately under-reports rather than guessing, and
- * says so through `support.perSimDataAvailable`.
+ * says so through `support.perSimDataAvailable`. What it must never do is read
+ * a missing permission as missing hardware: a SIM the permission cannot
+ * enumerate is still reported, and hardware capabilities fall back to probes
+ * that need no permission rather than to false.
  *
  * ## Threading
  *
@@ -187,9 +190,12 @@ class CarrierInfoPlusPlugin :
 
         return PlatformCarrierInfo(
             simCards = readSimCards(telephony, subscriptions, hasTelephony, granted),
-            capabilities = readCapabilities(context, telephony, hasTelephony, dataEnabled),
+            capabilities = readCapabilities(context, telephony, hasTelephony, granted, dataEnabled),
             network = readNetwork(telephony, granted, dataEnabled),
             support = PlatformSupportInfo(
+                // Whether identity can be read here, not whether any was: the
+                // permission-free tier reads it from whatever SIM is present,
+                // so this holds without the permission and with no SIM at all.
                 carrierIdentityAvailable = hasTelephony,
                 perSimDataAvailable = hasTelephony && granted,
                 permissionGranted = granted,
@@ -342,6 +348,7 @@ class CarrierInfoPlusPlugin :
         context: Context,
         telephony: TelephonyManager?,
         hasTelephony: Boolean,
+        granted: Boolean,
         dataEnabled: Boolean?,
     ): PlatformTelephonyCapabilities {
         if (telephony == null || !hasTelephony) {
@@ -364,14 +371,27 @@ class CarrierInfoPlusPlugin :
                 .getOrDefault(false)
         }
 
-        // isMultiSimSupported is API 29, and does want READ_PHONE_STATE.
-        val isMultiSimSupported = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            runCatching {
-                telephony.isMultiSimSupported == TelephonyManager.MULTISIM_ALLOWED
-            }.getOrDefault(false)
+        // How many SIMs the modem can run at once, which needs no permission.
+        // getSupportedModemCount (API 30) counts a dual-SIM phone running in
+        // single-SIM mode as two; getPhoneCount only counts active modems.
+        val multiSimHardware = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            runCatching { telephony.supportedModemCount > 1 }.getOrDefault(false)
         } else {
             @Suppress("DEPRECATION")
             runCatching { telephony.phoneCount > 1 }.getOrDefault(false)
+        }
+
+        // isMultiSimSupported is API 29 and wants READ_PHONE_STATE. Without it
+        // the call throws, which used to come back as false: a dual-SIM phone
+        // reported as single-SIM because of a permission. So it is only asked
+        // when it can answer, and adds the one thing the modem count cannot
+        // see -- a carrier blocking dual-SIM.
+        val isMultiSimSupported = if (granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching {
+                telephony.isMultiSimSupported == TelephonyManager.MULTISIM_ALLOWED
+            }.getOrDefault(multiSimHardware)
+        } else {
+            multiSimHardware
         }
 
         val supportsEmbeddedSim = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
