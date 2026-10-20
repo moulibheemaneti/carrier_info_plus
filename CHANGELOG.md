@@ -1,39 +1,11 @@
 # Changelog
 
-## 2.0.2 (unreleased)
+## [2.0.2](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.1...carrier_info_plus-v2.0.2) (2026-10-20)
 
-### Bug Fixes
 
-* **ios:** an iPhone with no SIM is no longer reported as having no cellular
-  hardware. 2.0.1 inferred the modem from an active service or from eSIM
-  provisioning support, and `supportsCellularPlan()` is only ever true for apps
-  holding Apple's carrier entitlement, so an empty tray came back as
-  `noTelephonyHardware` with `isVoiceCapable` and `isDataCapable` false. Being
-  an iPhone now proves the modem on its own, and a subscriber slot from
-  `CTSubscriberInfo.subscribers()` proves it on a cellular iPad with no SIM.
-* **ios:** `isVoiceCapable` is false on cellular iPads, which have a modem but
-  no cellular voice.
-* **android:** `isMultiSimSupported` no longer reads a denied
-  `READ_PHONE_STATE` as single-SIM hardware. Without the permission it now
-  comes from the modem count, which needs none; with it, it still reflects a
-  carrier blocking dual-SIM.
+### Miscellaneous
 
-### Documentation
-
-* `support.carrierIdentityAvailable` is documented as what it has always been:
-  whether the platform can read identity, not whether any was found. Android
-  reports true with no SIM and no permission; check `SimCard.hasIdentity` for
-  the data itself.
-* `simCount` on iOS is null rather than zero when no service is active, since
-  no service does not mean no SIM.
-* `supportsEmbeddedSim` on iOS needs Apple's carrier entitlement, so it is
-  false for every other app.
-
-### Tests
-
-* Native unit tests on both platforms, replacing templates that still called
-  the method-channel API removed in 2.0.0. Android's Mockito is now 5.23.0,
-  since 5.0.0 cannot mock on JDK 21.
+* **deps:** upgrade flutter to 3.47.7 and all packages ([#9](https://github.com/moulibheemaneti/carrier_info_plus/issues/9)) ([f21682b](https://github.com/moulibheemaneti/carrier_info_plus/commit/f21682be956c5e05997b9f185135be19c4257ffe))
 
 ## [2.0.1](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.0...carrier_info_plus-v2.0.1) (2026-09-22)
 
