@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.2...carrier_info_plus-v2.0.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* stop reading a missing SIM or permission as missing hardware ([#8](https://github.com/moulibheemaneti/carrier_info_plus/issues/8)) ([6cffe57](https://github.com/moulibheemaneti/carrier_info_plus/commit/6cffe57e7d511927a052712f2b6dabc67eeb74a2))
+
 ## [2.0.2](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.1...carrier_info_plus-v2.0.2) (2026-10-20)
 
 
