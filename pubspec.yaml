@@ -26,11 +26,11 @@ dependencies:
   meta: ^1.18.3
 
 dev_dependencies:
-  dart_husky: ^1.9.3
+  dart_husky: ^1.9.4
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  pigeon: ^29.0.2
+  pigeon: ^29.0.10
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
