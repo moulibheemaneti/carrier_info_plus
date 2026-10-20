@@ -21,7 +21,9 @@ final class TelephonyCapabilities {
 
   /// Whether the device has a cellular data radio at all.
   ///
-  /// A property of the hardware, so it holds with no SIM inserted.
+  /// A property of the hardware, so it holds with no SIM inserted. The one
+  /// exception is a cellular iPad with no active service, which reports false:
+  /// iOS gives no way to tell it apart from a Wi-Fi-only iPad.
   final bool isDataCapable;
 
   /// Whether mobile data is currently switched on by the user.

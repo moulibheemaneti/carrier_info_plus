@@ -25,8 +25,7 @@ import UIKit
 /// `getCarrierInfo` is bound to a background task queue, so everything it
 /// touches must be safe off the main thread. The CoreTelephony reads it makes
 /// are; UIKit is not, which is why SMS capability is sampled once during
-/// registration rather than read on demand. Subscriber slots are sampled there
-/// too, for a different reason: see `subscriberCount`.
+/// registration rather than read on demand.
 public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
 
   private let networkInfo = CTTelephonyNetworkInfo()
@@ -41,14 +40,6 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
   /// change while the app runs, so sampling it once is not a compromise.
   private let smsCapable: Bool
 
-  /// How many subscriber slots CoreTelephony reports, sampled at registration.
-  ///
-  /// Only used to decide whether the device has a modem, which cannot change
-  /// while the app runs. Apple documents no threading guarantee for
-  /// `CTSubscriberInfo` either way, so it is read here on the main thread
-  /// rather than trusted on the background queue.
-  private let subscriberCount: Int
-
   /// Whether this hardware is an iPhone. Fixed for the life of the process.
   private let isPhone: Bool
 
@@ -58,7 +49,6 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
   // constructing the plugin.
   override init() {
     smsCapable = MFMessageComposeViewController.canSendText()
-    subscriberCount = CTSubscriberInfo.subscribers().count
     isPhone = CarrierInfoPlusPlugin.hardwareModel().hasPrefix("iPhone")
     super.init()
   }
@@ -96,7 +86,6 @@ public class CarrierInfoPlusPlugin: NSObject, FlutterPlugin, CarrierInfoApi {
     return CellularReadings(
       serviceRadios: services.values.map(Self.mapRadio),
       supportsCellularPlan: planProvisioning.supportsCellularPlan(),
-      subscriberCount: subscriberCount,
       isPhone: isPhone,
       smsCapable: smsCapable,
       cellularDataState: cellularDataState()

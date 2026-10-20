@@ -23,12 +23,6 @@ struct CellularReadings {
   /// gets false on every device, eSIM or not.
   var supportsCellularPlan: Bool
 
-  /// How many entries `CTSubscriberInfo.subscribers()` returned.
-  ///
-  /// These are subscriber slots, not SIMs: an iPhone with no SIM in it has been
-  /// observed reporting two, and the Simulator reports none.
-  var subscriberCount: Int
-
   /// Whether the hardware is an iPhone, judged from its model identifier.
   var isPhone: Bool
 
@@ -44,21 +38,22 @@ struct CellularReadings {
 extension CellularReadings {
   /// Whether the device has a cellular modem at all.
   ///
-  /// iOS has no API that answers this, so four readings are combined. Each one
-  /// can prove a modem exists but none can prove it missing, which is why any
-  /// single one is enough:
+  /// iOS has no API that answers this, so three readings are combined. Each
+  /// one can prove a modem exists but none can prove it missing, which is why
+  /// any single one is enough:
   ///
   ///  - The device is an iPhone. Every iPhone has a modem, so this holds with
   ///    no SIM, in airplane mode and out of coverage, where the others may not.
   ///  - A cellular service is active.
   ///  - eSIM provisioning is supported, which only a carrier's app ever sees.
-  ///  - A subscriber slot exists. This is the one that catches a cellular iPad
-  ///    with no SIM in it.
   ///
-  /// The Simulator reports none of the four. A Wi-Fi-only iPad has no baseband
-  /// to report a service or a slot from, so it should report none either.
+  /// The Simulator and a Wi-Fi-only iPad report none of the three. Neither does
+  /// a cellular iPad with no active service, so it is reported as having no
+  /// modem. `CTSubscriberInfo.subscribers()` might tell the two iPads apart,
+  /// but what it returns on a Wi-Fi-only iPad has not been checked on a device,
+  /// and reading it wrong there would turn a correct answer into a wrong one.
   var hasCellularModem: Bool {
-    return isPhone || !serviceRadios.isEmpty || supportsCellularPlan || subscriberCount > 0
+    return isPhone || !serviceRadios.isEmpty || supportsCellularPlan
   }
 
   /// How many cellular services are active, or nil when none are.

@@ -16,7 +16,6 @@ class RunnerTests: XCTestCase {
   private func readings(
     serviceRadios: [PlatformRadioAccessTechnology] = [],
     supportsCellularPlan: Bool = false,
-    subscriberCount: Int = 0,
     isPhone: Bool = false,
     smsCapable: Bool = false,
     cellularDataState: PlatformCellularDataState = .unknown
@@ -24,7 +23,6 @@ class RunnerTests: XCTestCase {
     return CellularReadings(
       serviceRadios: serviceRadios,
       supportsCellularPlan: supportsCellularPlan,
-      subscriberCount: subscriberCount,
       isPhone: isPhone,
       smsCapable: smsCapable,
       cellularDataState: cellularDataState
@@ -34,10 +32,10 @@ class RunnerTests: XCTestCase {
   // MARK: - Hardware present, no service
 
   /// The regression: a real iPhone with no SIM, as measured. No service and
-  /// no eSIM provisioning, which 2.0.1 read as no modem at all.
+  /// no eSIM provisioning, which 2.0.1 read as no modem at all. Being an
+  /// iPhone is enough on its own.
   func testIPhoneWithNoSimHasAModem() {
     let info = readings(
-      subscriberCount: 2,
       isPhone: true,
       smsCapable: true,
       cellularDataState: .notRestricted
@@ -52,32 +50,12 @@ class RunnerTests: XCTestCase {
 
   /// No service does not mean no SIM, so the count is withheld, not zeroed.
   func testNoServiceLeavesSimCountUnknown() {
-    let info = readings(subscriberCount: 2, isPhone: true).carrierInfo()
+    let info = readings(isPhone: true).carrierInfo()
 
     XCTAssertNil(info.simCount)
     XCTAssertTrue(info.simCards.isEmpty)
     XCTAssertTrue(info.network.radioTechnologies.isEmpty)
     XCTAssertFalse(info.capabilities.isMultiSimSupported)
-  }
-
-  /// Being an iPhone is enough on its own, so the fix does not rest on
-  /// `CTSubscriberInfo` behaving the same on every iOS release.
-  func testIPhoneHasAModemWithoutAnySubscriber() {
-    let info = readings(isPhone: true).carrierInfo()
-
-    XCTAssertEqual(info.support.limitation, .platformRemovedApi)
-    XCTAssertTrue(info.capabilities.isVoiceCapable)
-    XCTAssertTrue(info.capabilities.isDataCapable)
-  }
-
-  /// A cellular iPad with no SIM: only the subscriber slot gives the modem
-  /// away. It carries data but places no calls.
-  func testCellularIPadWithNoSimIsDataOnly() {
-    let info = readings(subscriberCount: 1, smsCapable: true).carrierInfo()
-
-    XCTAssertEqual(info.support.limitation, .platformRemovedApi)
-    XCTAssertTrue(info.capabilities.isDataCapable)
-    XCTAssertFalse(info.capabilities.isVoiceCapable)
   }
 
   /// Only a carrier's app ever sees eSIM provisioning support, but when it
@@ -105,7 +83,8 @@ class RunnerTests: XCTestCase {
   }
 
   /// A Wi-Fi-only iPad signed into iMessage can send texts. That must not be
-  /// mistaken for a modem.
+  /// mistaken for a modem. A cellular iPad with no active service reads the
+  /// same, so it is reported the same; see `hasCellularModem`.
   func testWiFiOnlyIPadHasNoModemEvenWithIMessage() {
     let info = readings(smsCapable: true).carrierInfo()
 
@@ -120,7 +99,6 @@ class RunnerTests: XCTestCase {
   func testActiveServiceIsCountedAndReported() {
     let info = readings(
       serviceRadios: [.nrNsa],
-      subscriberCount: 2,
       isPhone: true,
       smsCapable: true,
       cellularDataState: .notRestricted
@@ -134,8 +112,7 @@ class RunnerTests: XCTestCase {
   }
 
   func testTwoActiveServicesAreMultiSim() {
-    let info = readings(serviceRadios: [.lte, .nr], subscriberCount: 2, isPhone: true)
-      .carrierInfo()
+    let info = readings(serviceRadios: [.lte, .nr], isPhone: true).carrierInfo()
 
     XCTAssertEqual(info.simCount, 2)
     XCTAssertTrue(info.capabilities.isMultiSimSupported)
