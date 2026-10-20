@@ -79,5 +79,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.0.0")
+    // 5.0.0's Byte Buddy stops at Java 20 and cannot mock anything on the JDK
+    // 21 that Android Studio runs Gradle with by default.
+    testImplementation("org.mockito:mockito-core:5.23.0")
 }

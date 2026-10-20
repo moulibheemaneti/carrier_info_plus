@@ -280,6 +280,56 @@ void main() {
     });
   });
 
+  group('Android without READ_PHONE_STATE', () {
+    // The shape the Kotlin side sends when the permission is denied: at most
+    // one SIM, described by the permission-free tier, and no count.
+    PlatformSimCard permissionFreeSim() => PlatformSimCard(
+      isEmbedded: false,
+      isRoaming: false,
+      simState: PlatformSimState.ready,
+      isDefaultData: true,
+      isDefaultVoice: true,
+      carrierName: 'Airtel',
+      mobileCountryCode: '404',
+      mobileNetworkCode: '10',
+      countryIso: 'in',
+    );
+
+    test('a SIM the permission cannot enumerate is still a SIM', () async {
+      CarrierInfoPlus.api = _FakeCarrierInfoApi(
+        _payload(
+          sims: <PlatformSimCard>[permissionFreeSim()],
+          limitation: PlatformDataLimitation.permissionNotGranted,
+          perSim: false,
+        ),
+      );
+
+      final info = await CarrierInfoPlus.get();
+
+      expect(info.simCount, isNull);
+      expect(info.hasSim, isTrue);
+      expect(info.primarySim?.plmn, '40410');
+      expect(info.primarySim?.subscriptionId, isNull);
+      expect(info.support.limitation.isRecoverable, isTrue);
+    });
+
+    test('no SIM reports no SIM', () async {
+      CarrierInfoPlus.api = _FakeCarrierInfoApi(
+        _payload(
+          limitation: PlatformDataLimitation.permissionNotGranted,
+          perSim: false,
+        ),
+      );
+
+      final info = await CarrierInfoPlus.get();
+
+      expect(info.simCount, isNull);
+      expect(info.hasSim, isFalse);
+      expect(info.primarySim, isNull);
+      expect(info.support.limitation.isRecoverable, isTrue);
+    });
+  });
+
   group('permission', () {
     test('requestPermission delegates to the host once', () async {
       final api = _FakeCarrierInfoApi(_payload());
