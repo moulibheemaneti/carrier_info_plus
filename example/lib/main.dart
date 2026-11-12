@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:carrier_info_plus/carrier_info_plus.dart';
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 void main() {

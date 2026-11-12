@@ -9,6 +9,7 @@
 // device where the platform side exists.
 
 import 'package:carrier_info_plus_example/main.dart';
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
