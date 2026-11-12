@@ -23,14 +23,14 @@ dependencies:
   # Imported by the pigeon-generated lib/src/messages.g.dart, so it has to be
   # a direct dependency even though no hand-written file uses it. Matches the
   # constraint the Flutter SDK declares for meta.
-  meta: ^1.18.3
+  meta: ^1.19.0
 
 dev_dependencies:
-  dart_husky: ^1.9.4
+  dart_husky: ^1.9.5
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  pigeon: ^29.0.10
+  pigeon: ^30.0.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
