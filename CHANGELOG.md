@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.5](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.4...carrier_info_plus-v2.0.5) (2026-11-12)
+
+
+### Miscellaneous
+
+* **example:** migrate example app to material_ui ([2399041](https://github.com/moulibheemaneti/carrier_info_plus/commit/2399041bd3aa115b91b8125ece0fabe3936a9ace))
+* **example:** migrate example app to material_ui ([2d4ae0c](https://github.com/moulibheemaneti/carrier_info_plus/commit/2d4ae0c7ff4fe8606a9d9ccf936e1913a72dd9ca))
+
 ## [2.0.4](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.3...carrier_info_plus-v2.0.4) (2026-11-12)
 
 
