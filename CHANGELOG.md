@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.3...carrier_info_plus-v2.0.4) (2026-11-12)
+
+
+### Miscellaneous
+
+* **deps:** upgrade flutter to 3.50.0 and all packages ([#12](https://github.com/moulibheemaneti/carrier_info_plus/issues/12)) ([060d797](https://github.com/moulibheemaneti/carrier_info_plus/commit/060d79779b25974b4bb3c94bd5494831dddec839))
+
 ## [2.0.3](https://github.com/moulibheemaneti/carrier_info_plus/compare/carrier_info_plus-v2.0.2...carrier_info_plus-v2.0.3) (2026-10-20)
 
 
